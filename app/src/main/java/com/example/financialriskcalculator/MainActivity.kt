@@ -13,7 +13,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
-import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -27,7 +26,10 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.financialriskcalculator.ui.screens.*
 import com.example.financialriskcalculator.ui.theme.FinancialRiskCalculatorTheme
+import com.example.financialriskcalculator.viewmodel.FinancialViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -41,24 +43,40 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-enum class AuthScreen {
-    LOGIN, SIGNUP, MAIN_APP
+enum class AppState {
+    LOGIN, SIGNUP, PROFILE_INPUT, FIXED_EXPENSES, DECISION_INPUT, RESULTS
 }
 
 @Composable
 fun AppNavigation() {
-    var currentScreen by rememberSaveable { mutableStateOf(AuthScreen.LOGIN) }
+    var currentState by rememberSaveable { mutableStateOf(AppState.LOGIN) }
+    val viewModel: FinancialViewModel = viewModel()
 
-    when (currentScreen) {
-        AuthScreen.LOGIN -> LoginScreen(
-            onLoginSuccess = { currentScreen = AuthScreen.MAIN_APP },
-            onCreateAccountClick = { currentScreen = AuthScreen.SIGNUP }
-        )
-        AuthScreen.SIGNUP -> SignupScreen(
-            onSignupSuccess = { currentScreen = AuthScreen.LOGIN },
-            onBackToLogin = { currentScreen = AuthScreen.LOGIN }
-        )
-        AuthScreen.MAIN_APP -> FinancialRiskCalculatorApp()
+    Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+        Box(modifier = Modifier.padding(innerPadding)) {
+            when (currentState) {
+                AppState.LOGIN -> LoginScreen(
+                    onLoginSuccess = { currentState = AppState.PROFILE_INPUT },
+                    onCreateAccountClick = { currentState = AppState.SIGNUP }
+                )
+                AppState.SIGNUP -> SignupScreen(
+                    onSignupSuccess = { currentState = AppState.LOGIN },
+                    onBackToLogin = { currentState = AppState.LOGIN }
+                )
+                AppState.PROFILE_INPUT -> ProfileInputScreen(viewModel, onNext = {
+                    currentState = AppState.FIXED_EXPENSES
+                })
+                AppState.FIXED_EXPENSES -> FixedExpensesScreen(viewModel, onNext = {
+                    currentState = AppState.DECISION_INPUT
+                })
+                AppState.DECISION_INPUT -> DecisionInputScreen(viewModel, onCalculate = {
+                    currentState = AppState.RESULTS
+                })
+                AppState.RESULTS -> ResultsScreen(viewModel, onReset = {
+                    currentState = AppState.DECISION_INPUT
+                })
+            }
+        }
     }
 }
 
@@ -70,7 +88,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit, onCreateAccountClick: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF0F0F0)), // Background color #f0f0f0
+            .background(Color(0xFFF0F0F0)),
         contentAlignment = Alignment.TopCenter
     ) {
         Column(
@@ -79,7 +97,6 @@ fun LoginScreen(onLoginSuccess: () -> Unit, onCreateAccountClick: () -> Unit) {
                 .padding(top = 60.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Logo at the top, centered, with 90% opacity
             Image(
                 painter = painterResource(id = R.mipmap.app_logo_foreground),
                 contentDescription = "App Logo",
@@ -90,7 +107,6 @@ fun LoginScreen(onLoginSuccess: () -> Unit, onCreateAccountClick: () -> Unit) {
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Login dialog box with color #a9c7ee
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -100,8 +116,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit, onCreateAccountClick: () -> Unit) {
                 shadowElevation = 8.dp
             ) {
                 Column(
-                    modifier = Modifier
-                        .padding(24.dp),
+                    modifier = Modifier.padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
@@ -121,9 +136,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit, onCreateAccountClick: () -> Unit) {
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedContainerColor = Color.White,
-                            unfocusedContainerColor = Color.White,
-                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedBorderColor = Color.Gray
+                            unfocusedContainerColor = Color.White
                         )
                     )
                     
@@ -139,9 +152,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit, onCreateAccountClick: () -> Unit) {
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedContainerColor = Color.White,
-                            unfocusedContainerColor = Color.White,
-                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedBorderColor = Color.Gray
+                            unfocusedContainerColor = Color.White
                         )
                     )
                     
@@ -320,65 +331,10 @@ fun validatePassword(password: String, confirmPassword: String): String? {
     return null
 }
 
-@Composable
-fun FinancialRiskCalculatorApp() {
-    var currentDestination by rememberSaveable { mutableStateOf(AppDestinations.HOME) }
-
-    NavigationSuiteScaffold(
-        navigationSuiteItems = {
-            AppDestinations.entries.forEach {
-                item(
-                    icon = {
-                        Icon(
-                            painterResource(it.icon),
-                            contentDescription = it.label
-                        )
-                    },
-                    label = { Text(it.label) },
-                    selected = it == currentDestination,
-                    onClick = { currentDestination = it }
-                )
-            }
-        }
-    ) {
-        Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-                contentAlignment = Alignment.Center
-            ) {
-                when (currentDestination) {
-                    AppDestinations.HOME -> Text("Welcome to Home Screen")
-                    AppDestinations.FAVORITES -> Text("Your Favorites")
-                    AppDestinations.PROFILE -> Text("User Profile")
-                }
-            }
-        }
-    }
-}
-
-enum class AppDestinations(
-    val label: String,
-    val icon: Int,
-) {
-    HOME("Home", R.drawable.ic_home),
-    FAVORITES("Favorites", R.drawable.ic_favorite),
-    PROFILE("Profile", R.drawable.ic_account_box),
-}
-
 @Preview(showBackground = true)
 @Composable
 fun LoginPreview() {
     FinancialRiskCalculatorTheme {
         LoginScreen(onLoginSuccess = {}, onCreateAccountClick = {})
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun SignupPreview() {
-    FinancialRiskCalculatorTheme {
-        SignupScreen(onSignupSuccess = {}, onBackToLogin = {})
     }
 }
