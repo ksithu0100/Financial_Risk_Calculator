@@ -1,25 +1,27 @@
 package com.example.financialriskcalculator
 
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountBox
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.tooling.preview.PreviewScreenSizes
+import androidx.compose.ui.platform.LocalContext
 import com.example.financialriskcalculator.ui.theme.FinancialRiskCalculatorTheme
 
 class MainActivity : ComponentActivity() {
@@ -34,44 +36,55 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@PreviewScreenSizes
 @Composable
 fun FinancialRiskCalculatorApp() {
-    var currentDestination by rememberSaveable { mutableStateOf(AppDestinations.HOME) }
+    var currentDestination by rememberSaveable { mutableStateOf(AppDestinations.FINANCIAL_DATA) }
+    val context = LocalContext.current
 
     NavigationSuiteScaffold(
         navigationSuiteItems = {
-            AppDestinations.entries.forEach {
+            AppDestinations.entries.forEach { destination ->
                 item(
                     icon = {
                         Icon(
-                            painterResource(it.icon),
-                            contentDescription = it.label
+                            imageVector = destination.icon,
+                            contentDescription = destination.label
                         )
                     },
-                    label = { Text(it.label) },
-                    selected = it == currentDestination,
-                    onClick = { currentDestination = it }
+                    label = { Text(destination.label) },
+                    selected = destination == currentDestination,
+                    onClick = { currentDestination = destination }
                 )
             }
         }
     ) {
         Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-            Greeting(
-                name = "Android",
-                modifier = Modifier.padding(innerPadding)
-            )
+            Box(modifier = Modifier.padding(innerPadding)) {
+                when (currentDestination) {
+                    AppDestinations.HOME -> Greeting("Home Screen")
+                    AppDestinations.FAVORITES -> Greeting("Favorites Screen")
+                    AppDestinations.PROFILE -> Greeting("Profile Screen")
+                    AppDestinations.FINANCIAL_DATA -> FinancialDataScreen(
+                        onSave = { profile ->
+                            // Here you can implement actual storage (Room, DataStore, etc.)
+                            Toast.makeText(context, "Saved data for ${profile.name}", Toast.LENGTH_SHORT).show()
+                            // For now, we'll just log it or navigate away
+                        }
+                    )
+                }
+            }
         }
     }
 }
 
 enum class AppDestinations(
     val label: String,
-    val icon: Int,
+    val icon: ImageVector,
 ) {
-    HOME("Home", R.drawable.ic_home),
-    FAVORITES("Favorites", R.drawable.ic_favorite),
-    PROFILE("Profile", R.drawable.ic_account_box),
+    HOME("Home", Icons.Default.Home),
+    FAVORITES("Favorites", Icons.Default.Favorite),
+    PROFILE("Profile", Icons.Default.AccountBox),
+    FINANCIAL_DATA("Financial Data", Icons.Default.Edit),
 }
 
 @Composable
@@ -80,12 +93,4 @@ fun Greeting(name: String, modifier: Modifier = Modifier) {
         text = "Hello $name!",
         modifier = modifier
     )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    FinancialRiskCalculatorTheme {
-        Greeting("Android")
-    }
 }
