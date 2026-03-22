@@ -2,32 +2,37 @@ package com.example.financialriskcalculator.models;
 
 public class FinancialDecision {
     public enum Category {
-        // Needs (Necessities)
+        // Needs (Essentials)
         HOUSING("Housing (Rent/Mortgage)"),
-        UTILITIES("Utilities & Bills"),
+        UTILITIES("Utilities (Electric/Water/Heat)"),
         TRANSPORTATION("Transportation (Car/Gas/Public Transit)"),
-        GROCERIES("Groceries & Home Essentials"),
+        GROCERIES("Groceries & Food Staples"),
         HEALTHCARE("Healthcare & Medical"),
-        INSURANCE("Insurance Payments"),
-        INTERNET_PHONE("Internet & Phone Bill"),
+        INSURANCE("Insurance Premiums"),
+        INTERNET_PHONE("Internet & Phone Plan"),
+        CHILDCARE("Childcare / Schooling"),
+        MAINTENANCE("Maintenance (Car/Home)"),
         
-        // Wants (Lifestyle/Discretionary)
-        DINING_OUT("Dining Out & Takeout"),
-        ENTERTAINMENT("Entertainment (Movies, Events, Concerts)"),
-        SHOPPING("Shopping (Clothes, Accessories)"),
-        TRAVEL("Travel & Vacations"),
-        SUBSCRIPTIONS("Streaming & Digital Services"),
-        GYM_FITNESS("Gym & Fitness"),
-        HOBBIES("Hobbies & Leisure"),
-        GIFTS("Gifts & Donations"),
-        ELECTRONICS("Electronics & Gadgets"),
+        // Wants (Lifestyle)
+        DINING_OUT("Dining Out / Coffee / Takeout"),
+        ENTERTAINMENT("Movies / Concerts / Events"),
+        SHOPPING("Shopping (Clothes/Accessories)"),
+        TRAVEL("Travel / Vacations / Hotels"),
+        SUBSCRIPTIONS("Streaming (Netflix/Spotify)"),
+        GYM_FITNESS("Gym / Fitness Classes"),
+        HOBBIES("Hobbies (Gaming/Crafts)"),
+        HOME_DECOR("Home Decor & Furniture"),
+        ELECTRONICS("Electronics (Phone/Laptop)"),
+        PERSONAL_CARE("Personal Care (Hair/Skin)"),
+        PET_EXPENSES("Pet Supplies / Vet"),
         
-        // Savings & Investments
-        STOCKS_ASSETS("Stocks, Crypto & Assets"),
+        // Savings & Debt (Financial Future)
+        STOCKS_INVESTMENTS("Stocks & Brokerage"),
         EMERGENCY_FUND("Emergency Fund"),
         RETIREMENT("Retirement (401k/IRA)"),
         DEBT_REPAYMENT("Debt Repayment (Loans/Credit)"),
-        EDUCATION("Education & Self-Improvement"),
+        CRYPTO("Cryptocurrency"),
+        PROFESSIONAL_DUES("Professional Dues / Education"),
         
         // Misc
         MISC("Miscellaneous");

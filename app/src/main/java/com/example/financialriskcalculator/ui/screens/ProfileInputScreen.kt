@@ -16,6 +16,29 @@ fun ProfileInputScreen(viewModel: FinancialViewModel, onNext: () -> Unit) {
     var savings by remember { mutableStateOf("") }
     var creditScore by remember { mutableStateOf("") }
     var occupation by remember { mutableStateOf("") }
+    
+    var showWarningDialog by remember { mutableStateOf(false) }
+
+    if (showWarningDialog) {
+        AlertDialog(
+            onDismissRequest = { showWarningDialog = false },
+            title = { Text("Financial Flag Detected") },
+            text = { Text("🚨 Note: Your high savings relative to a low credit score is an unusual pattern that may be flagged as suspicious. Please ensure all data is accurate before proceeding.") },
+            confirmButton = {
+                Button(onClick = { 
+                    showWarningDialog = false
+                    onNext() 
+                }) {
+                    Text("Proceed Anyway")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showWarningDialog = false }) {
+                    Text("Review Data")
+                }
+            }
+        )
+    }
 
     Column(
         modifier = Modifier
@@ -35,14 +58,22 @@ fun ProfileInputScreen(viewModel: FinancialViewModel, onNext: () -> Unit) {
 
         Button(
             onClick = {
+                val s = savings.toDoubleOrNull() ?: 0.0
+                val c = creditScore.toIntOrNull() ?: 0
+                
                 viewModel.updateBasicInfo(
                     name,
                     income.toDoubleOrNull() ?: 0.0,
-                    savings.toDoubleOrNull() ?: 0.0,
-                    creditScore.toIntOrNull() ?: 0,
+                    s,
+                    c,
                     occupation
                 )
-                onNext()
+                
+                if (s > 50000 && c < 550) {
+                    showWarningDialog = true
+                } else {
+                    onNext()
+                }
             },
             modifier = Modifier.fillMaxWidth()
         ) {
