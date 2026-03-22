@@ -32,6 +32,7 @@ public class UserProfile {
 
         public double getRatioForCategory(FinancialDecision.Category category) {
             switch (category) {
+                // Needs (Essentials)
                 case HOUSING:
                 case UTILITIES:
                 case TRANSPORTATION:
@@ -39,7 +40,10 @@ public class UserProfile {
                 case HEALTHCARE:
                 case INSURANCE:
                 case INTERNET_PHONE:
+                case CHILDCARE:
+                case MAINTENANCE:
                     return needsRatio;
+                // Wants (Lifestyle)
                 case DINING_OUT:
                 case ENTERTAINMENT:
                 case SHOPPING:
@@ -47,14 +51,19 @@ public class UserProfile {
                 case SUBSCRIPTIONS:
                 case GYM_FITNESS:
                 case HOBBIES:
-                case GIFTS:
+                case HOME_DECOR:
+                case ELECTRONICS:
+                case PERSONAL_CARE:
+                case PET_EXPENSES:
                 case MISC:
                     return wantsRatio;
-                case STOCKS_ASSETS:
+                // Savings & Debt
+                case STOCKS_INVESTMENTS:
                 case EMERGENCY_FUND:
                 case RETIREMENT:
                 case DEBT_REPAYMENT:
-                case EDUCATION:
+                case CRYPTO:
+                case PROFESSIONAL_DUES:
                     return savingsRatio;
                 default:
                     return 0;

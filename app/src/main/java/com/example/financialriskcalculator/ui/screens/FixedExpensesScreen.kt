@@ -44,12 +44,13 @@ fun FixedExpensesScreen(viewModel: FinancialViewModel, onNext: () -> Unit) {
         expenses.forEachIndexed { index, expense ->
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                modifier = Modifier.fillMaxWidth()
             ) {
                 OutlinedTextField(
                     value = expense.amount,
-                    onValueChange = { expenses[index] = expense.copy(amount = it) },
+                    onValueChange = { newValue ->
+                        expenses[index] = expense.copy(amount = newValue)
+                    },
                     label = { Text(expense.name) },
                     modifier = Modifier.weight(1f),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -58,7 +59,7 @@ fun FixedExpensesScreen(viewModel: FinancialViewModel, onNext: () -> Unit) {
                 
                 // Allow deleting only extra expenses
                 if (expense.name != "Rent" && expense.name != "Insurance" && expense.name != "Utilities") {
-                    IconButton(onClick = { expenses.removeAt(index) }) {
+                    IconButton(onClick = { expenses.remove(expense) }) {
                         Icon(imageVector = Icons.Default.Delete, contentDescription = "Delete Expense")
                     }
                 }
@@ -106,7 +107,7 @@ fun FixedExpensesScreen(viewModel: FinancialViewModel, onNext: () -> Unit) {
 
         Button(
             onClick = {
-                // Clear existing expenses in the profile to ensure fresh update
+                // Clear existing expenses in profile before adding current ones
                 viewModel.userProfile.getFixedExpenses().clear()
                 expenses.forEach {
                     viewModel.addFixedExpense(it.name, it.amount.toDoubleOrNull() ?: 0.0)
