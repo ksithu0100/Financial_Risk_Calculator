@@ -68,7 +68,10 @@ fun AppNavigation() {
                         ) 
                     },
                     navigationIcon = {
-                        IconButton(onClick = { currentState = AppState.LOGIN }) {
+                        IconButton(onClick = { 
+                            viewModel.logout()
+                            currentState = AppState.LOGIN 
+                        }) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.Logout,
                                 contentDescription = "Logout"
@@ -93,13 +96,15 @@ fun AppNavigation() {
         Box(modifier = Modifier.padding(innerPadding)) {
             when (currentState) {
                 AppState.LOGIN -> LoginScreen(
-                    onLoginSuccess = {
+                    viewModel = viewModel,
+                    onLoginSuccess = { email ->
                         scope.launch {
-                            val user = viewModel.checkIfUserExists()
-                            if (user != null) {
-                                viewModel.loadProfileFromDb()
+                            val user = viewModel.findUserByEmail(email)
+                            if (user != null && user.firstName != null && user.firstName.isNotEmpty()) {
+                                viewModel.loadProfileFromDb(email)
                                 currentState = AppState.PROFILE_MAIN
                             } else {
+                                viewModel.setCurrentUser(email)
                                 currentState = AppState.PROFILE_INPUT
                             }
                         }
@@ -107,16 +112,26 @@ fun AppNavigation() {
                     onCreateAccountClick = { currentState = AppState.SIGNUP }
                 )
                 AppState.SIGNUP -> SignupScreen(
+                    viewModel = viewModel,
                     onSignupSuccess = { currentState = AppState.LOGIN },
                     onBackToLogin = { currentState = AppState.LOGIN }
                 )
-                AppState.PROFILE_INPUT -> ProfileInputScreen(viewModel, onNext = {
-                    currentState = AppState.FIXED_EXPENSES
-                })
-                AppState.FIXED_EXPENSES -> FixedExpensesScreen(viewModel, onNext = {
-                    viewModel.saveProfileToDb()
-                    currentState = AppState.PROFILE_MAIN
-                })
+                AppState.PROFILE_INPUT -> ProfileInputScreen(
+                    viewModel = viewModel, 
+                    onNext = { currentState = AppState.FIXED_EXPENSES },
+                    onBack = if (currentState == AppState.PROFILE_INPUT && viewModel.currentUserEmail != null) {
+                        { currentState = AppState.SETTINGS }
+                    } else null
+                )
+                AppState.FIXED_EXPENSES -> FixedExpensesScreen(
+                    viewModel = viewModel, 
+                    onNext = {
+                        viewModel.saveProfileToDb()
+                        viewModel.loadProfileFromDb(viewModel.currentUserEmail ?: "")
+                        currentState = AppState.PROFILE_MAIN
+                    },
+                    onBack = { currentState = AppState.PROFILE_INPUT }
+                )
                 AppState.DECISION_INPUT -> DecisionInputScreen(viewModel, onCalculate = {
                     currentState = AppState.RESULTS
                 })
@@ -125,7 +140,12 @@ fun AppNavigation() {
                 })
                 AppState.PROFILE_MAIN -> ProfileScreen(viewModel)
                 AppState.LOGBOOK -> PlaceholderScreen("Logbook")
-                AppState.SETTINGS -> PlaceholderScreen("Settings")
+                AppState.SETTINGS -> SettingsScreen(
+                    viewModel = viewModel,
+                    onEditProfile = { currentState = AppState.PROFILE_INPUT },
+                    onDeleteAccount = { currentState = AppState.LOGIN },
+                    onBack = { currentState = AppState.PROFILE_MAIN }
+                )
             }
         }
     }

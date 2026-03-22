@@ -5,6 +5,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
@@ -19,17 +20,34 @@ import com.example.financialriskcalculator.viewmodel.FinancialViewModel
 data class ExpenseItem(val name: String, val amount: String)
 
 @Composable
-fun FixedExpensesScreen(viewModel: FinancialViewModel, onNext: () -> Unit) {
+fun FixedExpensesScreen(
+    viewModel: FinancialViewModel, 
+    onNext: () -> Unit,
+    onBack: (() -> Unit)? = null
+) {
+    val userProfile = viewModel.userProfile
     val expenses = remember { 
-        mutableStateListOf(
-            ExpenseItem("Rent", ""),
-            ExpenseItem("Insurance", ""),
-            ExpenseItem("Utilities", "")
-        ) 
+        val list = mutableStateListOf<ExpenseItem>()
+        
+        // Add default if they don't exist, otherwise populate from profile
+        val currentExpenses = userProfile.getFixedExpenses()
+        
+        if (currentExpenses.isEmpty()) {
+            list.add(ExpenseItem("Rent", ""))
+            list.add(ExpenseItem("Insurance", ""))
+            list.add(ExpenseItem("Utilities", ""))
+        } else {
+            currentExpenses.forEach { (name, amount) ->
+                list.add(ExpenseItem(name, if (amount == 0.0) "" else amount.toString()))
+            }
+        }
+        list
     }
     
     var expanded by remember { mutableStateOf(false) }
-    var selectedStrategy by remember { mutableStateOf(UserProfile.BudgetStrategy.STRATEGY_50_30_20) }
+    var selectedStrategy by remember { 
+        mutableStateOf(userProfile.budgetStrategy ?: UserProfile.BudgetStrategy.STRATEGY_50_30_20) 
+    }
 
     Column(
         modifier = Modifier
@@ -38,7 +56,18 @@ fun FixedExpensesScreen(viewModel: FinancialViewModel, onNext: () -> Unit) {
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text("Monthly Fixed Expenses", style = MaterialTheme.typography.headlineMedium)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Monthly Fixed Expenses", style = MaterialTheme.typography.headlineMedium)
+            if (onBack != null) {
+                IconButton(onClick = onBack) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                }
+            }
+        }
 
         expenses.forEachIndexed { index, expense ->
             Row(
@@ -106,7 +135,6 @@ fun FixedExpensesScreen(viewModel: FinancialViewModel, onNext: () -> Unit) {
 
         Button(
             onClick = {
-                // Fix: Use Java getter/setter for UserProfile
                 viewModel.userProfile.getFixedExpenses().clear()
                 expenses.forEach {
                     viewModel.addFixedExpense(it.name, it.amount.toDoubleOrNull() ?: 0.0)
@@ -118,7 +146,7 @@ fun FixedExpensesScreen(viewModel: FinancialViewModel, onNext: () -> Unit) {
             },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Continue to Financial Decisions")
+            Text("Save & Continue")
         }
     }
 }

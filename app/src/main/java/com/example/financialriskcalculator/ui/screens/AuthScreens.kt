@@ -21,11 +21,19 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.example.financialriskcalculator.R
+import com.example.financialriskcalculator.viewmodel.FinancialViewModel
+import kotlinx.coroutines.launch
 
 @Composable
-fun LoginScreen(onLoginSuccess: () -> Unit, onCreateAccountClick: () -> Unit) {
-    var username by remember { mutableStateOf("") }
+fun LoginScreen(
+    viewModel: FinancialViewModel,
+    onLoginSuccess: (String) -> Unit,
+    onCreateAccountClick: () -> Unit
+) {
+    var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
 
     Box(
         modifier = Modifier
@@ -54,8 +62,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit, onCreateAccountClick: () -> Unit) {
                     .fillMaxWidth()
                     .padding(horizontal = 32.dp),
                 shape = RoundedCornerShape(24.dp),
-                color = Color(0xFFA9C7EE),
-                shadowElevation = 8.dp
+                color = Color(0xFFA9C7EE), shadowElevation = 8.dp
             ) {
                 Column(
                     modifier = Modifier.padding(24.dp),
@@ -71,10 +78,14 @@ fun LoginScreen(onLoginSuccess: () -> Unit, onCreateAccountClick: () -> Unit) {
                     Spacer(modifier = Modifier.height(24.dp))
                     
                     OutlinedTextField(
-                        value = username,
-                        onValueChange = { username = it },
-                        label = { Text("Username") },
+                        value = email,
+                        onValueChange = { 
+                            email = it
+                            errorMessage = null
+                        },
+                        label = { Text("Email") },
                         modifier = Modifier.fillMaxWidth(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedContainerColor = Color.White,
@@ -86,7 +97,10 @@ fun LoginScreen(onLoginSuccess: () -> Unit, onCreateAccountClick: () -> Unit) {
                     
                     OutlinedTextField(
                         value = password,
-                        onValueChange = { password = it },
+                        onValueChange = { 
+                            password = it
+                            errorMessage = null
+                        },
                         label = { Text("Password") },
                         visualTransformation = PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
@@ -97,11 +111,35 @@ fun LoginScreen(onLoginSuccess: () -> Unit, onCreateAccountClick: () -> Unit) {
                             unfocusedContainerColor = Color.White
                         )
                     )
+
+                    if (errorMessage != null) {
+                        Text(
+                            text = errorMessage!!,
+                            color = Color.Red,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
+                    }
                     
                     Spacer(modifier = Modifier.height(32.dp))
                     
                     Button(
-                        onClick = onLoginSuccess,
+                        onClick = {
+                            if (email.isBlank() || password.isBlank()) {
+                                errorMessage = "Please fill in all fields"
+                                return@Button
+                            }
+                            scope.launch {
+                                val user = viewModel.findUserByEmail(email)
+                                if (user == null) {
+                                    errorMessage = "Email not found"
+                                } else if (user.password != password) {
+                                    errorMessage = "Incorrect password"
+                                } else {
+                                    onLoginSuccess(email)
+                                }
+                            }
+                        },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(
@@ -121,12 +159,17 @@ fun LoginScreen(onLoginSuccess: () -> Unit, onCreateAccountClick: () -> Unit) {
 }
 
 @Composable
-fun SignupScreen(onSignupSuccess: () -> Unit, onBackToLogin: () -> Unit) {
+fun SignupScreen(
+    viewModel: FinancialViewModel,
+    onSignupSuccess: () -> Unit, 
+    onBackToLogin: () -> Unit
+) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
 
     Box(
         modifier = Modifier
@@ -155,8 +198,7 @@ fun SignupScreen(onSignupSuccess: () -> Unit, onBackToLogin: () -> Unit) {
                     .fillMaxWidth()
                     .padding(horizontal = 32.dp),
                 shape = RoundedCornerShape(24.dp),
-                color = Color(0xFFA9C7EE),
-                shadowElevation = 8.dp
+                color = Color(0xFFA9C7EE), shadowElevation = 8.dp
             ) {
                 Column(
                     modifier = Modifier.padding(24.dp),
@@ -173,7 +215,10 @@ fun SignupScreen(onSignupSuccess: () -> Unit, onBackToLogin: () -> Unit) {
 
                     OutlinedTextField(
                         value = email,
-                        onValueChange = { email = it },
+                        onValueChange = { 
+                            email = it
+                            errorMessage = null
+                        },
                         label = { Text("Email") },
                         modifier = Modifier.fillMaxWidth(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
@@ -229,7 +274,7 @@ fun SignupScreen(onSignupSuccess: () -> Unit, onBackToLogin: () -> Unit) {
                     if (errorMessage != null) {
                         Text(
                             text = errorMessage!!,
-                            color = MaterialTheme.colorScheme.error,
+                            color = Color.Red,
                             style = MaterialTheme.typography.bodySmall,
                             modifier = Modifier.padding(top = 8.dp)
                         )
@@ -241,7 +286,14 @@ fun SignupScreen(onSignupSuccess: () -> Unit, onBackToLogin: () -> Unit) {
                         onClick = {
                             val validationError = validatePassword(password, confirmPassword)
                             if (validationError == null) {
-                                onSignupSuccess()
+                                scope.launch {
+                                    val success = viewModel.signupUser(email, password)
+                                    if (success) {
+                                        onSignupSuccess()
+                                    } else {
+                                        errorMessage = "Account already exists with this email"
+                                    }
+                                }
                             } else {
                                 errorMessage = validationError
                             }

@@ -70,6 +70,11 @@ fun ProfileScreen(viewModel: FinancialViewModel) {
                     fontWeight = FontWeight.Bold
                 )
                 Text(
+                    text = "Age: ${if (userProfile.age > 0) userProfile.age else "xx"}",
+                    fontSize = 16.sp,
+                    color = Color.Gray
+                )
+                Text(
                     text = "Profession: ${userProfile.occupation ?: "xxxx"}",
                     fontSize = 16.sp,
                     color = Color.Gray
