@@ -113,6 +113,8 @@ fun FixedExpensesScreen(viewModel: FinancialViewModel, onNext: () -> Unit) {
                     viewModel.addFixedExpense(it.name, it.amount.toDoubleOrNull() ?: 0.0)
                 }
                 viewModel.setBudgetStrategy(selectedStrategy)
+                
+                viewModel.saveProfileToDb()
                 onNext()
             },
             modifier = Modifier.fillMaxWidth()
