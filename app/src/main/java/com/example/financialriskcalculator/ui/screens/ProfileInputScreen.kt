@@ -11,7 +11,8 @@ import com.example.financialriskcalculator.viewmodel.FinancialViewModel
 
 @Composable
 fun ProfileInputScreen(viewModel: FinancialViewModel, onNext: () -> Unit) {
-    var name by remember { mutableStateOf("") }
+    var firstName by remember { mutableStateOf("") }
+    var lastName by remember { mutableStateOf("") }
     var income by remember { mutableStateOf("") }
     var savings by remember { mutableStateOf("") }
     var creditScore by remember { mutableStateOf("") }
@@ -48,9 +49,28 @@ fun ProfileInputScreen(viewModel: FinancialViewModel, onNext: () -> Unit) {
     ) {
         Text("User Profile Information", style = MaterialTheme.typography.headlineMedium)
 
-        OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Name") }, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(value = income, onValueChange = { income = it }, label = { Text("Monthly Income") }, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
-        OutlinedTextField(value = savings, onValueChange = { savings = it }, label = { Text("Current Savings") }, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            OutlinedTextField(
+                value = firstName,
+                onValueChange = { firstName = it },
+                label = { Text("First Name") },
+                modifier = Modifier.weight(1f),
+                singleLine = true
+            )
+            OutlinedTextField(
+                value = lastName,
+                onValueChange = { lastName = it },
+                label = { Text("Last Name") },
+                modifier = Modifier.weight(1f),
+                singleLine = true
+            )
+        }
+
+        OutlinedTextField(value = income, onValueChange = { income = it }, label = { Text("Monthly Income") }, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), prefix = { Text("$") })
+        OutlinedTextField(value = savings, onValueChange = { savings = it }, label = { Text("Current Savings") }, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), prefix = { Text("$") })
         OutlinedTextField(value = creditScore, onValueChange = { creditScore = it }, label = { Text("Credit Score") }, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
         OutlinedTextField(value = occupation, onValueChange = { occupation = it }, label = { Text("Occupation") }, modifier = Modifier.fillMaxWidth())
 
@@ -62,7 +82,7 @@ fun ProfileInputScreen(viewModel: FinancialViewModel, onNext: () -> Unit) {
                 val c = creditScore.toIntOrNull() ?: 0
                 
                 viewModel.updateBasicInfo(
-                    name,
+                    "$firstName $lastName".trim(),
                     income.toDoubleOrNull() ?: 0.0,
                     s,
                     c,
@@ -75,7 +95,8 @@ fun ProfileInputScreen(viewModel: FinancialViewModel, onNext: () -> Unit) {
                     onNext()
                 }
             },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            enabled = firstName.isNotBlank() && lastName.isNotBlank() && income.isNotBlank()
         ) {
             Text("Continue to Expenses")
         }
