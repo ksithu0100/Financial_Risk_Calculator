@@ -9,7 +9,6 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
@@ -21,7 +20,7 @@ data class ExpenseItem(val name: String, val amount: String)
 
 @Composable
 fun FixedExpensesScreen(viewModel: FinancialViewModel, onNext: () -> Unit) {
-    val expenses: SnapshotStateList<ExpenseItem> = remember { 
+    val expenses = remember { 
         mutableStateListOf(
             ExpenseItem("Rent", ""),
             ExpenseItem("Insurance", ""),
@@ -59,7 +58,7 @@ fun FixedExpensesScreen(viewModel: FinancialViewModel, onNext: () -> Unit) {
                 
                 // Allow deleting only extra expenses
                 if (expense.name != "Rent" && expense.name != "Insurance" && expense.name != "Utilities") {
-                    IconButton(onClick = { expenses.remove(expense) }) {
+                    IconButton(onClick = { expenses.removeAt(index) }) {
                         Icon(imageVector = Icons.Default.Delete, contentDescription = "Delete Expense")
                     }
                 }
@@ -94,7 +93,7 @@ fun FixedExpensesScreen(viewModel: FinancialViewModel, onNext: () -> Unit) {
 
         Text("Select Budget Strategy", style = MaterialTheme.typography.titleMedium)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            UserProfile.BudgetStrategy.entries.forEach { strategy ->
+            UserProfile.BudgetStrategy.values().forEach { strategy ->
                 FilterChip(
                     selected = selectedStrategy == strategy,
                     onClick = { selectedStrategy = strategy },
@@ -107,7 +106,7 @@ fun FixedExpensesScreen(viewModel: FinancialViewModel, onNext: () -> Unit) {
 
         Button(
             onClick = {
-                // Clear existing expenses in profile before adding current ones
+                // Fix: Use Java getter/setter for UserProfile
                 viewModel.userProfile.getFixedExpenses().clear()
                 expenses.forEach {
                     viewModel.addFixedExpense(it.name, it.amount.toDoubleOrNull() ?: 0.0)
