@@ -6,6 +6,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -36,14 +37,35 @@ fun FixedExpensesScreen(viewModel: FinancialViewModel, onNext: () -> Unit) {
         Text("Monthly Fixed Expenses", style = MaterialTheme.typography.headlineMedium)
 
         expenses.forEachIndexed { index, expense ->
-            OutlinedTextField(
-                value = expense.amount,
-                onValueChange = { expenses[index] = expense.copy(amount = it) },
-                label = { Text(expense.name) },
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                prefix = { Text("$") }
-            )
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedTextField(
+                    value = expense.amount,
+                    onValueChange = { input ->
+                        if (input.isEmpty() || (input.count { it == '.' } <= 1 && input.all { it.isDigit() || it == '.' })) {
+                            expenses[index] = expense.copy(amount = input)
+                        }
+                    },
+                    label = { Text(expense.name) },
+                    modifier = Modifier.weight(1f),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    prefix = { Text("$") }
+                )
+
+                val isCoreExpense = expense.name == "Rent" || expense.name == "Insurance" || expense.name == "Utilities"
+                if (!isCoreExpense) {
+                    IconButton(onClick = { expenses.removeAt(index) }) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "Delete ${expense.name}",
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+            }
         }
 
         Box(modifier = Modifier.fillMaxWidth()) {
@@ -87,10 +109,13 @@ fun FixedExpensesScreen(viewModel: FinancialViewModel, onNext: () -> Unit) {
 
         Button(
             onClick = {
+                viewModel.userProfile.fixedExpenses.clear()
                 expenses.forEach {
                     viewModel.addFixedExpense(it.name, it.amount.toDoubleOrNull() ?: 0.0)
                 }
                 viewModel.setBudgetStrategy(selectedStrategy)
+                
+                viewModel.saveProfileToDb()
                 onNext()
             },
             modifier = Modifier.fillMaxWidth()
