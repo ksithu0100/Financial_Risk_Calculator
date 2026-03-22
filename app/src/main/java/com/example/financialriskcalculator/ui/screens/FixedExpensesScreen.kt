@@ -9,6 +9,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
@@ -16,13 +17,17 @@ import androidx.compose.ui.unit.dp
 import com.example.financialriskcalculator.models.UserProfile
 import com.example.financialriskcalculator.viewmodel.FinancialViewModel
 
+data class ExpenseItem(val name: String, val amount: String)
+
 @Composable
 fun FixedExpensesScreen(viewModel: FinancialViewModel, onNext: () -> Unit) {
-    val expenses = remember { mutableStateListOf(
-        ExpenseItem("Rent", ""),
-        ExpenseItem("Insurance", ""),
-        ExpenseItem("Utilities", "")
-    ) }
+    val expenses: SnapshotStateList<ExpenseItem> = remember { 
+        mutableStateListOf(
+            ExpenseItem("Rent", ""),
+            ExpenseItem("Insurance", ""),
+            ExpenseItem("Utilities", "")
+        ) 
+    }
     
     var expanded by remember { mutableStateOf(false) }
     var selectedStrategy by remember { mutableStateOf(UserProfile.BudgetStrategy.STRATEGY_50_30_20) }
@@ -38,31 +43,24 @@ fun FixedExpensesScreen(viewModel: FinancialViewModel, onNext: () -> Unit) {
 
         expenses.forEachIndexed { index, expense ->
             Row(
-                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                modifier = Modifier.fillMaxWidth()
             ) {
                 OutlinedTextField(
                     value = expense.amount,
-                    onValueChange = { input ->
-                        if (input.isEmpty() || (input.count { it == '.' } <= 1 && input.all { it.isDigit() || it == '.' })) {
-                            expenses[index] = expense.copy(amount = input)
-                        }
+                    onValueChange = { newValue ->
+                        expenses[index] = expense.copy(amount = newValue)
                     },
                     label = { Text(expense.name) },
                     modifier = Modifier.weight(1f),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     prefix = { Text("$") }
                 )
-
-                val isCoreExpense = expense.name == "Rent" || expense.name == "Insurance" || expense.name == "Utilities"
-                if (!isCoreExpense) {
-                    IconButton(onClick = { expenses.removeAt(index) }) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = "Delete ${expense.name}",
-                            tint = MaterialTheme.colorScheme.error
-                        )
+                
+                // Allow deleting only extra expenses
+                if (expense.name != "Rent" && expense.name != "Insurance" && expense.name != "Utilities") {
+                    IconButton(onClick = { expenses.remove(expense) }) {
+                        Icon(imageVector = Icons.Default.Delete, contentDescription = "Delete Expense")
                     }
                 }
             }
@@ -109,7 +107,8 @@ fun FixedExpensesScreen(viewModel: FinancialViewModel, onNext: () -> Unit) {
 
         Button(
             onClick = {
-                viewModel.userProfile.fixedExpenses.clear()
+                // Clear existing expenses in profile before adding current ones
+                viewModel.userProfile.getFixedExpenses().clear()
                 expenses.forEach {
                     viewModel.addFixedExpense(it.name, it.amount.toDoubleOrNull() ?: 0.0)
                 }
@@ -124,5 +123,3 @@ fun FixedExpensesScreen(viewModel: FinancialViewModel, onNext: () -> Unit) {
         }
     }
 }
-
-data class ExpenseItem(val name: String, val amount: String)

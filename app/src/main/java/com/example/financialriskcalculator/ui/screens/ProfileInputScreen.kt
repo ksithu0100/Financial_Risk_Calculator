@@ -41,27 +41,6 @@ fun ProfileInputScreen(viewModel: FinancialViewModel, onNext: () -> Unit) {
         )
     }
 
-    // Helper to filter name (no digits)
-    val onNameChange: (String, (String) -> Unit) -> Unit = { input, setter ->
-        if (input.all { it.isLetter() || it.isWhitespace() }) {
-            setter(input)
-        }
-    }
-
-    // Helper to filter positive numbers (decimal)
-    val onDecimalChange: (String, (String) -> Unit) -> Unit = { input, setter ->
-        if (input.isEmpty() || input.count { it == '.' } <= 1 && input.all { it.isDigit() || it == '.' }) {
-            setter(input)
-        }
-    }
-
-    // Helper to filter positive integers
-    val onIntegerChange: (String, (String) -> Unit) -> Unit = { input, setter ->
-        if (input.all { it.isDigit() }) {
-            setter(input)
-        }
-    }
-
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -76,49 +55,24 @@ fun ProfileInputScreen(viewModel: FinancialViewModel, onNext: () -> Unit) {
         ) {
             OutlinedTextField(
                 value = firstName,
-                onValueChange = { onNameChange(it) { firstName = it } },
+                onValueChange = { firstName = it },
                 label = { Text("First Name") },
                 modifier = Modifier.weight(1f),
                 singleLine = true
             )
             OutlinedTextField(
                 value = lastName,
-                onValueChange = { onNameChange(it) { lastName = it } },
+                onValueChange = { lastName = it },
                 label = { Text("Last Name") },
                 modifier = Modifier.weight(1f),
                 singleLine = true
             )
         }
 
-        OutlinedTextField(
-            value = income,
-            onValueChange = { onDecimalChange(it) { income = it } },
-            label = { Text("Monthly Income") },
-            modifier = Modifier.fillMaxWidth(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            prefix = { Text("$") }
-        )
-        OutlinedTextField(
-            value = savings,
-            onValueChange = { onDecimalChange(it) { savings = it } },
-            label = { Text("Current Savings") },
-            modifier = Modifier.fillMaxWidth(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            prefix = { Text("$") }
-        )
-        OutlinedTextField(
-            value = creditScore,
-            onValueChange = { onIntegerChange(it) { creditScore = it } },
-            label = { Text("Credit Score") },
-            modifier = Modifier.fillMaxWidth(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-        )
-        OutlinedTextField(
-            value = occupation,
-            onValueChange = { onNameChange(it) { occupation = it } },
-            label = { Text("Occupation") },
-            modifier = Modifier.fillMaxWidth()
-        )
+        OutlinedTextField(value = income, onValueChange = { income = it }, label = { Text("Monthly Income") }, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), prefix = { Text("$") })
+        OutlinedTextField(value = savings, onValueChange = { savings = it }, label = { Text("Current Savings") }, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), prefix = { Text("$") })
+        OutlinedTextField(value = creditScore, onValueChange = { creditScore = it }, label = { Text("Credit Score") }, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+        OutlinedTextField(value = occupation, onValueChange = { occupation = it }, label = { Text("Occupation") }, modifier = Modifier.fillMaxWidth())
 
         Spacer(modifier = Modifier.weight(1f))
 
@@ -142,7 +96,7 @@ fun ProfileInputScreen(viewModel: FinancialViewModel, onNext: () -> Unit) {
                 }
             },
             modifier = Modifier.fillMaxWidth(),
-            enabled = firstName.isNotBlank() && lastName.isNotBlank() && income.isNotBlank() && savings.isNotBlank() && creditScore.isNotBlank()
+            enabled = firstName.isNotBlank() && lastName.isNotBlank() && income.isNotBlank()
         ) {
             Text("Continue to Expenses")
         }
