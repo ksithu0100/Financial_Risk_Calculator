@@ -351,9 +351,49 @@ fun FinancialRiskCalculatorApp() {
                 when (currentDestination) {
                     AppDestinations.HOME -> Text("Welcome to Home Screen")
                     AppDestinations.FAVORITES -> Text("Your Favorites")
-                    AppDestinations.PROFILE -> Text("User Profile")
+                    AppDestinations.PROFILE -> ProfileScreen()
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun ProfileScreen() {
+    var firstName by remember { mutableStateOf("") }
+    var lastName by remember { mutableStateOf("") }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = "User Profile",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 24.dp)
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            OutlinedTextField(
+                value = firstName,
+                onValueChange = { firstName = it },
+                label = { Text("First Name") },
+                modifier = Modifier.weight(1f),
+                singleLine = true
+            )
+            OutlinedTextField(
+                value = lastName,
+                onValueChange = { lastName = it },
+                label = { Text("Last Name") },
+                modifier = Modifier.weight(1f),
+                singleLine = true
+            )
         }
     }
 }
@@ -380,5 +420,13 @@ fun LoginPreview() {
 fun SignupPreview() {
     FinancialRiskCalculatorTheme {
         SignupScreen(onSignupSuccess = {}, onBackToLogin = {})
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun ProfilePreview() {
+    FinancialRiskCalculatorTheme {
+        ProfileScreen()
     }
 }
