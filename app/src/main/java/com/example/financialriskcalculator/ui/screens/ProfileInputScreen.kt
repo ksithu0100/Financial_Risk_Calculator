@@ -11,11 +11,35 @@ import com.example.financialriskcalculator.viewmodel.FinancialViewModel
 
 @Composable
 fun ProfileInputScreen(viewModel: FinancialViewModel, onNext: () -> Unit) {
-    var name by remember { mutableStateOf("") }
+    var firstName by remember { mutableStateOf("") }
+    var lastName by remember { mutableStateOf("") }
     var income by remember { mutableStateOf("") }
     var savings by remember { mutableStateOf("") }
     var creditScore by remember { mutableStateOf("") }
     var occupation by remember { mutableStateOf("") }
+    
+    var showWarningDialog by remember { mutableStateOf(false) }
+
+    if (showWarningDialog) {
+        AlertDialog(
+            onDismissRequest = { showWarningDialog = false },
+            title = { Text("Financial Flag Detected") },
+            text = { Text("🚨 Note: Your high savings relative to a low credit score is an unusual pattern that may be flagged as suspicious. Please ensure all data is accurate before proceeding.") },
+            confirmButton = {
+                Button(onClick = { 
+                    showWarningDialog = false
+                    onNext() 
+                }) {
+                    Text("Proceed Anyway")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showWarningDialog = false }) {
+                    Text("Review Data")
+                }
+            }
+        )
+    }
 
     Column(
         modifier = Modifier
@@ -25,9 +49,28 @@ fun ProfileInputScreen(viewModel: FinancialViewModel, onNext: () -> Unit) {
     ) {
         Text("User Profile Information", style = MaterialTheme.typography.headlineMedium)
 
-        OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Name") }, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(value = income, onValueChange = { income = it }, label = { Text("Monthly Income") }, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
-        OutlinedTextField(value = savings, onValueChange = { savings = it }, label = { Text("Current Savings") }, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            OutlinedTextField(
+                value = firstName,
+                onValueChange = { firstName = it },
+                label = { Text("First Name") },
+                modifier = Modifier.weight(1f),
+                singleLine = true
+            )
+            OutlinedTextField(
+                value = lastName,
+                onValueChange = { lastName = it },
+                label = { Text("Last Name") },
+                modifier = Modifier.weight(1f),
+                singleLine = true
+            )
+        }
+
+        OutlinedTextField(value = income, onValueChange = { income = it }, label = { Text("Monthly Income") }, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), prefix = { Text("$") })
+        OutlinedTextField(value = savings, onValueChange = { savings = it }, label = { Text("Current Savings") }, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), prefix = { Text("$") })
         OutlinedTextField(value = creditScore, onValueChange = { creditScore = it }, label = { Text("Credit Score") }, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
         OutlinedTextField(value = occupation, onValueChange = { occupation = it }, label = { Text("Occupation") }, modifier = Modifier.fillMaxWidth())
 
@@ -35,16 +78,25 @@ fun ProfileInputScreen(viewModel: FinancialViewModel, onNext: () -> Unit) {
 
         Button(
             onClick = {
+                val s = savings.toDoubleOrNull() ?: 0.0
+                val c = creditScore.toIntOrNull() ?: 0
+                
                 viewModel.updateBasicInfo(
-                    name,
+                    "$firstName $lastName".trim(),
                     income.toDoubleOrNull() ?: 0.0,
-                    savings.toDoubleOrNull() ?: 0.0,
-                    creditScore.toIntOrNull() ?: 0,
+                    s,
+                    c,
                     occupation
                 )
-                onNext()
+                
+                if (s > 50000 && c < 550) {
+                    showWarningDialog = true
+                } else {
+                    onNext()
+                }
             },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            enabled = firstName.isNotBlank() && lastName.isNotBlank() && income.isNotBlank()
         ) {
             Text("Continue to Expenses")
         }
