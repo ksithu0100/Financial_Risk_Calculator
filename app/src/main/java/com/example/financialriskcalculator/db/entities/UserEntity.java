@@ -2,18 +2,36 @@ package com.example.financialriskcalculator.db.entities;
 
 import androidx.room.Entity;
 import androidx.room.PrimaryKey;
+import androidx.annotation.NonNull;
 
 @Entity(tableName = "users")
 public class UserEntity {
     @PrimaryKey(autoGenerate = true)
     public int id;
 
-    public String firstName;
-    public String lastName;
-    public int age;              // Must be > 0
-    public double monthlyIncome; // Must be >= 0
-    public double totalSavings;  // Must be >= 0
-    public int creditScore;      // Must be >= 0
-    public String occupation;
-    public String budgetStrategy; // e.g., "50/30/20"
+    @NonNull
+    public String email = "";
+    
+    @NonNull
+    public String password = "";
+    
+    @NonNull
+    public String firstName = "";
+    
+    @NonNull
+    public String lastName = "";
+    
+    public int age = 0;
+    
+    public double monthlyIncome = 0.0;
+    
+    public double totalSavings = 0.0;
+    
+    public int creditScore = 0;
+    
+    @NonNull
+    public String occupation = "";
+    
+    @NonNull
+    public String budgetStrategy = "50/30/20";
 }

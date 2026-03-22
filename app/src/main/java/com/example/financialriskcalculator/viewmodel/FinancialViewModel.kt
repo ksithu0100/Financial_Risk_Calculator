@@ -1,7 +1,11 @@
 package com.example.financialriskcalculator.viewmodel
 
 import android.app.Application
-import androidx.compose.runtime.*
+import android.util.Log
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableDoubleStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.financialriskcalculator.db.AppDatabase
@@ -21,6 +25,9 @@ import java.time.LocalDate
 class FinancialViewModel(application: Application) : AndroidViewModel(application) {
     private val db = AppDatabase.getDatabase(application)
     
+    var currentUserEmail: String? by mutableStateOf(null)
+        private set
+
     var userProfile: UserProfile by mutableStateOf(UserProfile())
         private set
 
@@ -42,38 +49,14 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
     var savingsRatio by mutableDoubleStateOf(0.2)
         private set
 
-    // Properties for ResultsScreen
-    var riskResult by mutableStateOf<RiskCalculator.RiskResult?>(null)
-        private set
-    var currentDecision by mutableStateOf<FinancialDecision?>(null)
-        private set
-
-    val availableExtraExpenses = listOf("Childcare", "Gym/Fitness", "Subscriptions", "Debt Repayment", "Hobbies")
-
-    fun updateBasicInfo(name: String, income: Double, savings: Double, creditScore: Int, occupation: String, age: Int) {
-        userProfile.name = name
-        userProfile.monthlyIncome = income
-        userProfile.totalSavings = savings
-        userProfile.creditScore = creditScore
-        userProfile.occupation = occupation
-        userProfile.age = age
-        // Trigger recomposition
-        userProfile = userProfile
-    }
-
-    fun addFixedExpense(name: String, amount: Double) {
-        userProfile.addFixedExpense(name, amount)
-        userProfile = userProfile
-    }
-
-    fun setBudgetStrategy(strategy: UserProfile.BudgetStrategy) {
-        userProfile.budgetStrategy = strategy
-        this.selectedSplitLabel = strategy.displayName
-        this.needsRatio = strategy.needsRatio
-        this.wantsRatio = strategy.wantsRatio
-        this.savingsRatio = strategy.savingsRatio
-        userProfile = userProfile
-    }
+    val availableExtraExpenses = listOf(
+        "Streaming Subscriptions",
+        "Music Subscriptions",
+        "Groceries",
+        "Gym Membership",
+        "Internet",
+        "Phone Bill"
+    )
 
     fun updateSplit(label: String, needs: Int, wants: Int, savings: Int) {
         selectedSplitLabel = label
@@ -81,9 +64,74 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
         wantsRatio = wants / 100.0
         savingsRatio = savings / 100.0
         
-        val strategy = if (label == "70/20/10") UserProfile.BudgetStrategy.STRATEGY_70_20_10 else UserProfile.BudgetStrategy.STRATEGY_50_30_20
-        userProfile.budgetStrategy = strategy
-        userProfile = userProfile
+        val strategy = if (label == "70/20/10") UserProfile.BudgetStrategy.STRATEGY_70_20_10 
+                      else UserProfile.BudgetStrategy.STRATEGY_50_30_20
+        userProfile.setBudgetStrategy(strategy)
+        userProfile = userProfile // Trigger recomposition
+    }
+
+    fun updateBasicInfo(name: String, age: Int, income: Double, savings: Double, creditScore: Int, occupation: String) {
+        userProfile.setName(name)
+        userProfile.setAge(age)
+        userProfile.setMonthlyIncome(income)
+        userProfile.setTotalSavings(savings)
+        userProfile.setCreditScore(creditScore)
+        userProfile.setOccupation(occupation)
+        userProfile = userProfile // Trigger recomposition
+    }
+
+    fun addFixedExpense(name: String, amount: Double) {
+        userProfile.addFixedExpense(name, amount)
+        userProfile = userProfile // Trigger recomposition
+    }
+
+    fun setBudgetStrategy(strategy: UserProfile.BudgetStrategy) {
+        userProfile.setBudgetStrategy(strategy)
+        userProfile = userProfile // Trigger recomposition
+    }
+
+    suspend fun findUserByEmail(email: String): UserEntity? {
+        val normalizedEmail = email.lowercase().trim()
+        return withContext(Dispatchers.IO) {
+            try {
+                val user = db.userDao().getUserByEmail(normalizedEmail)
+                Log.d("FinancialViewModel", "findUserByEmail: $normalizedEmail found: ${user != null}")
+                user
+            } catch (e: Exception) {
+                Log.e("FinancialViewModel", "Error finding user", e)
+                null
+            }
+        }
+    }
+
+    fun logout() {
+        currentUserEmail = null
+        userProfile = UserProfile()
+        currentDecision = null
+        riskResult = null
+    }
+
+    fun setCurrentUser(email: String) {
+        currentUserEmail = email.lowercase().trim()
+    }
+
+    suspend fun signupUser(email: String, password: String): Boolean {
+        val normalizedEmail = email.lowercase().trim()
+        return withContext(Dispatchers.IO) {
+            try {
+                val existing = db.userDao().getUserByEmail(normalizedEmail)
+                if (existing != null) return@withContext false
+                
+                val newUser = UserEntity().apply {
+                    this.email = normalizedEmail
+                    this.password = password
+                }
+                db.userDao().insertUser(newUser)
+                true
+            } catch (e: Exception) {
+                false
+            }
+        }
     }
 
     suspend fun checkIfUserExists(): UserEntity? {
@@ -91,146 +139,98 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     fun saveProfileToDb() {
+        val email = currentUserEmail ?: return
         viewModelScope.launch(Dispatchers.IO) {
-            val user = UserEntity().apply {
-                val fullName = userProfile.name ?: ""
-                this.firstName = fullName.split(" ").getOrNull(0) ?: ""
-                this.lastName = if (fullName.split(" ").size > 1) fullName.split(" ").drop(1).joinToString(" ") else ""
-                this.monthlyIncome = userProfile.monthlyIncome
-                this.totalSavings = userProfile.totalSavings
-                this.creditScore = userProfile.creditScore
-                this.occupation = userProfile.occupation
-                this.budgetStrategy = selectedSplitLabel
-            }
-            val userId = db.userDao().insertUser(user).toInt()
-            
-            val expenseEntities = userProfile.fixedExpenses.entries.map { entry ->
-                ExpenseEntity().apply {
-                    this.userId = userId
-                    this.expenseName = entry.key
-                    this.amount = entry.value
-                }
-            }
-            db.expenseDao().deleteExpensesForUser(userId)
-            db.expenseDao().insertAll(expenseEntities)
-        }
-    }
-
-    fun loadProfileFromDb() {
-        viewModelScope.launch(Dispatchers.IO) {
-            val userEntity = db.userDao().getUser() ?: return@launch
-            withContext(Dispatchers.Main) {
-                userProfile.name = "${userEntity.firstName} ${userEntity.lastName}".trim()
-                userProfile.monthlyIncome = userEntity.monthlyIncome
-                userProfile.totalSavings = userEntity.totalSavings
-                userProfile.creditScore = userEntity.creditScore
-                userProfile.occupation = userEntity.occupation
-                selectedSplitLabel = userEntity.budgetStrategy ?: "50/30/20"
+            try {
+                val userEntity = db.userDao().getUserByEmail(email) ?: UserEntity().apply { this.email = email }
                 
-                val strategy = if (selectedSplitLabel == "70/20/10") {
-                    needsRatio = 0.7; wantsRatio = 0.2; savingsRatio = 0.1
-                    UserProfile.BudgetStrategy.STRATEGY_70_20_10
-                } else {
-                    needsRatio = 0.5; wantsRatio = 0.3; savingsRatio = 0.2
-                    UserProfile.BudgetStrategy.STRATEGY_50_30_20
+                val names = (userProfile.getName() ?: "").split(" ")
+                val firstName = names.getOrNull(0) ?: ""
+                val lastName = if (names.size > 1) names.subList(1, names.size).joinToString(" ") else ""
+
+                userEntity.firstName = firstName
+                userEntity.lastName = lastName
+                userEntity.age = userProfile.getAge()
+                userEntity.monthlyIncome = userProfile.getMonthlyIncome()
+                userEntity.totalSavings = userProfile.getTotalSavings()
+                userEntity.creditScore = userProfile.getCreditScore()
+                userEntity.occupation = userProfile.getOccupation()
+                userEntity.budgetStrategy = selectedSplitLabel
+
+                val userId = db.userDao().insertUser(userEntity).toInt()
+
+                // Save expenses
+                val expenseEntities = userProfile.getFixedExpenses().entries.map { entry ->
+                    ExpenseEntity().apply {
+                        this.userId = userId
+                        this.expenseName = entry.key
+                        this.amount = entry.value
+                    }
                 }
-                userProfile.budgetStrategy = strategy
-                userProfile = userProfile
+                db.expenseDao().deleteExpensesForUser(userId)
+                db.expenseDao().insertAll(expenseEntities)
+                
+                loadProfileFromDb(email)
+            } catch (e: Exception) {
+                Log.e("FinancialViewModel", "Error saving profile", e)
             }
-            val userId = userEntity.id
-            val expenses = db.expenseDao().getExpensesForUser(userId)
-            withContext(Dispatchers.Main) {
-                userProfile.fixedExpenses.clear()
-                expenses.forEach { userProfile.addFixedExpense(it.expenseName, it.amount) }
-                userProfile = userProfile
-            }
-            loadPlans(userId)
         }
     }
 
-    private fun loadPlans(userId: Int) {
+    fun loadProfileFromDb(email: String) {
+        val normalizedEmail = email.lowercase().trim()
+        currentUserEmail = normalizedEmail
         viewModelScope.launch(Dispatchers.IO) {
-            val entities = db.planDao().getPlansForUser(userId)
-            val mapped = entities.map { entity ->
-                if (entity.type == "LTP") {
-                    FinancialPlan.LongTermPlan(
-                        id = entity.id,
-                        name = entity.planName ?: "",
-                        goal = entity.goal ?: "",
-                        cost = entity.cost,
-                        amountSaved = entity.amountSaved,
-                        createDate = try { LocalDate.parse(entity.createDate) } catch(e: Exception) { LocalDate.now() },
-                        goalDate = if (entity.goalDate != null && entity.goalDate != "null") try { LocalDate.parse(entity.goalDate) } catch(e: Exception) { null } else null,
-                        description = entity.description ?: "",
-                        changes = emptyList(),
-                        expenditures = emptyList()
-                    )
-                } else {
-                    FinancialPlan.ShortTermQuery(id = entity.id, name = entity.planName ?: "", expenditures = emptyList())
+            try {
+                val userEntity = db.userDao().getUserByEmail(normalizedEmail)
+                if (userEntity != null) {
+                    val userId = userEntity.id
+                    val expenses = db.expenseDao().getExpensesForUser(userId)
+                    
+                    withContext(Dispatchers.Main) {
+                        val updatedProfile = UserProfile()
+                        updatedProfile.setName("${userEntity.firstName ?: ""} ${userEntity.lastName ?: ""}".trim())
+                        updatedProfile.setAge(userEntity.age)
+                        updatedProfile.setMonthlyIncome(userEntity.monthlyIncome)
+                        updatedProfile.setTotalSavings(userEntity.totalSavings)
+                        updatedProfile.setCreditScore(userEntity.creditScore)
+                        updatedProfile.setOccupation(userEntity.occupation ?: "")
+                        
+                        expenses.forEach { 
+                            updatedProfile.addFixedExpense(it.expenseName, it.amount)
+                        }
+
+                        selectedSplitLabel = userEntity.budgetStrategy ?: "50/30/20"
+                        if (selectedSplitLabel == "70/20/10") {
+                            needsRatio = 0.7; wantsRatio = 0.2; savingsRatio = 0.1
+                        } else if (selectedSplitLabel == "50/30/20") {
+                            needsRatio = 0.5; wantsRatio = 0.3; savingsRatio = 0.2
+                        }
+                        
+                        userProfile = updatedProfile
+                    }
                 }
+            } catch (e: Exception) {
+                Log.e("FinancialViewModel", "Error loading profile", e)
             }
-            _plans.value = mapped
         }
     }
 
-    fun selectPlan(plan: FinancialPlan) {
-        if (plan is FinancialPlan.LongTermPlan) {
-            activeLtp = plan
-        } else if (plan is FinancialPlan.ShortTermQuery) {
-            activeStq = plan
-        }
-    }
-
-    fun calculateRisk(itemName: String, amount: Double, category: FinancialDecision.Category, isLongTerm: Boolean) {
-        val decision = FinancialDecision(itemName, amount, category, isLongTerm)
-        currentDecision = decision
-        
-        // Ensure strategy is set before calculation
-        val strategy = if (selectedSplitLabel == "70/20/10") UserProfile.BudgetStrategy.STRATEGY_70_20_10 else UserProfile.BudgetStrategy.STRATEGY_50_30_20
-        userProfile.budgetStrategy = strategy
-        userProfile = userProfile
-        
-        riskResult = RiskCalculator.calculateRisk(userProfile, decision)
-    }
-
-    fun calculateRisk(queryCost: Double): RiskCalculator.RiskResult {
-        val decision = FinancialDecision("Temporary", queryCost, FinancialDecision.Category.MISC, false)
-        return RiskCalculator.calculateRisk(userProfile, decision)
-    }
-
-    fun savePlan(plan: FinancialPlan) {
+    fun deleteAccount(onSuccess: () -> Unit) {
+        val email = currentUserEmail ?: return
         viewModelScope.launch(Dispatchers.IO) {
-            val user = db.userDao().getUser() ?: return@launch
-            val entity = PlanEntity().apply {
-                if (plan.id != 0) {
-                    this.id = plan.id
+            try {
+                val user = db.userDao().getUserByEmail(email)
+                if (user != null) {
+                    db.expenseDao().deleteExpensesForUser(user.id)
+                    db.userDao().deleteUser(user)
+                    withContext(Dispatchers.Main) {
+                        logout()
+                        onSuccess()
+                    }
                 }
-                this.userId = user.id
-                this.planName = plan.name
-                if (plan is FinancialPlan.LongTermPlan) {
-                    this.type = "LTP"
-                    this.goal = plan.goal
-                    this.cost = plan.cost
-                    this.amountSaved = plan.amountSaved
-                    this.createDate = plan.createDate.toString()
-                    this.goalDate = plan.goalDate?.toString() ?: "null"
-                    this.description = plan.description
-                } else {
-                    this.type = "STQ"
-                }
-            }
-            db.planDao().insertPlan(entity)
-            loadPlans(user.id)
-        }
-    }
-
-    fun deletePlan(plan: FinancialPlan) {
-        viewModelScope.launch(Dispatchers.IO) {
-            val user = db.userDao().getUser() ?: return@launch
-            val entity = db.planDao().getPlanById(plan.id)
-            if (entity != null) {
-                db.planDao().deletePlan(entity)
-                loadPlans(user.id)
+            } catch (e: Exception) {
+                Log.e("FinancialViewModel", "Error deleting account", e)
             }
         }
     }
