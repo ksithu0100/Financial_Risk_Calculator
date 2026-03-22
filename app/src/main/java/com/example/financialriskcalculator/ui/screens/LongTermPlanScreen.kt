@@ -1,6 +1,5 @@
 package com.example.financialriskcalculator.ui.screens
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -300,20 +299,20 @@ fun LongTermPlanScreen(viewModel: FinancialViewModel, onSave: () -> Unit, onBack
         }
 
         if (showAssessment) {
-            val totalCost = cost.toDoubleOrNull() ?: 0.0
+            val totalCostNum = cost.toDoubleOrNull() ?: 0.0
             val saved = amountSaved.toDoubleOrNull() ?: 0.0
             val targetDate = try { LocalDate.parse(goalDate) } catch(e: Exception) { null }
             val monthsRemaining = if (targetDate != null) ChronoUnit.MONTHS.between(LocalDate.now(), targetDate).coerceAtLeast(1) else 12L
-            val monthlyNeeded = (totalCost - saved) / monthsRemaining
-            val monthlyIncome = viewModel.userProfile.monthlyIncome
-            val savingsCapacity = monthlyIncome * 0.2
+            val monthlyNeeded = (totalCostNum - saved) / monthsRemaining
+            val monthlyIncomeNum = viewModel.userProfile.monthlyIncome
+            val savingsCapacity = monthlyIncomeNum * 0.2
             
             AssessmentChatBox(
                 title = "Long Term Plan Assessment",
                 totalCost = monthlyNeeded,
                 budget = savingsCapacity,
                 details = listOf(
-                    "Remaining to Save" to (totalCost - saved),
+                    "Remaining to Save" to (totalCostNum - saved),
                     "Time Frame" to monthsRemaining.toDouble(),
                     "Monthly Goal" to monthlyNeeded,
                     "Monthly Capacity" to savingsCapacity
@@ -346,7 +345,7 @@ fun LongTermPlanScreen(viewModel: FinancialViewModel, onSave: () -> Unit, onBack
     }
 
     if (showCustomExpDialog) {
-        CustomExpenditureDialog(
+        CommonExpenditureDialog(
             isEdit = editingExpIndex >= 0,
             name = customExpName,
             amount = customExpAmount,

@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.financialriskcalculator.models.FinancialPlan
 import com.example.financialriskcalculator.models.PlanExpenditure
+import com.example.financialriskcalculator.models.UserProfile
 import com.example.financialriskcalculator.viewmodel.FinancialViewModel
 import java.time.LocalDate
 import java.util.Locale
@@ -38,8 +39,9 @@ fun ShortTermQueryScreen(viewModel: FinancialViewModel, onSave: () -> Unit, onBa
 
     var showAssessment by remember { mutableStateOf(false) }
 
-    val monthlyIncome = viewModel.userProfile.monthlyIncome
-    val totalExpenditure = expenditures.sumOf { it.amount }
+    val userProfile: UserProfile = viewModel.userProfile
+    val monthlyIncome: Double = userProfile.monthlyIncome
+    val totalExpenditure: Double = expenditures.sumOf { it.amount }
     
     val needLimit = monthlyIncome * 0.5
     val wantLimit = monthlyIncome * 0.3
