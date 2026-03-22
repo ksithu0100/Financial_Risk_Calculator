@@ -1,7 +1,9 @@
 package com.example.financialriskcalculator.ui.screens
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -13,6 +15,7 @@ import com.example.financialriskcalculator.viewmodel.FinancialViewModel
 fun ProfileInputScreen(viewModel: FinancialViewModel, onNext: () -> Unit) {
     var firstName by remember { mutableStateOf("") }
     var lastName by remember { mutableStateOf("") }
+    var age by remember { mutableStateOf("") }
     var income by remember { mutableStateOf("") }
     var savings by remember { mutableStateOf("") }
     var creditScore by remember { mutableStateOf("") }
@@ -41,10 +44,32 @@ fun ProfileInputScreen(viewModel: FinancialViewModel, onNext: () -> Unit) {
         )
     }
 
+    // Validation Helpers
+    val filterName: (String) -> String = { input ->
+        input.filter { it.isLetter() || it.isWhitespace() }
+    }
+
+    val filterDecimal: (String) -> String = { input ->
+        val filtered = input.filter { it.isDigit() || it == '.' }
+        val firstDotIndex = filtered.indexOf('.')
+        if (firstDotIndex != -1) {
+            val beforeDot = filtered.substring(0, firstDotIndex + 1)
+            val afterDot = filtered.substring(firstDotIndex + 1).replace(".", "")
+            beforeDot + afterDot
+        } else {
+            filtered
+        }
+    }
+
+    val filterInteger: (String) -> String = { input ->
+        input.filter { it.isDigit() }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .padding(16.dp)
+            .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text("User Profile Information", style = MaterialTheme.typography.headlineMedium)
@@ -55,24 +80,60 @@ fun ProfileInputScreen(viewModel: FinancialViewModel, onNext: () -> Unit) {
         ) {
             OutlinedTextField(
                 value = firstName,
-                onValueChange = { firstName = it },
+                onValueChange = { firstName = filterName(it) },
                 label = { Text("First Name") },
                 modifier = Modifier.weight(1f),
                 singleLine = true
             )
             OutlinedTextField(
                 value = lastName,
-                onValueChange = { lastName = it },
+                onValueChange = { lastName = filterName(it) },
                 label = { Text("Last Name") },
                 modifier = Modifier.weight(1f),
                 singleLine = true
             )
         }
 
-        OutlinedTextField(value = income, onValueChange = { income = it }, label = { Text("Monthly Income") }, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), prefix = { Text("$") })
-        OutlinedTextField(value = savings, onValueChange = { savings = it }, label = { Text("Current Savings") }, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), prefix = { Text("$") })
-        OutlinedTextField(value = creditScore, onValueChange = { creditScore = it }, label = { Text("Credit Score") }, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
-        OutlinedTextField(value = occupation, onValueChange = { occupation = it }, label = { Text("Occupation") }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(
+            value = age,
+            onValueChange = { age = filterInteger(it) },
+            label = { Text("Age") },
+            modifier = Modifier.fillMaxWidth(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+        )
+
+        OutlinedTextField(
+            value = income,
+            onValueChange = { income = filterDecimal(it) },
+            label = { Text("Monthly Income") },
+            modifier = Modifier.fillMaxWidth(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            prefix = { Text("$") }
+        )
+        
+        OutlinedTextField(
+            value = savings,
+            onValueChange = { savings = filterDecimal(it) },
+            label = { Text("Current Savings") },
+            modifier = Modifier.fillMaxWidth(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            prefix = { Text("$") }
+        )
+        
+        OutlinedTextField(
+            value = creditScore,
+            onValueChange = { creditScore = filterInteger(it) },
+            label = { Text("Credit Score") },
+            modifier = Modifier.fillMaxWidth(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+        )
+        
+        OutlinedTextField(
+            value = occupation,
+            onValueChange = { occupation = filterName(it) },
+            label = { Text("Occupation") },
+            modifier = Modifier.fillMaxWidth()
+        )
 
         Spacer(modifier = Modifier.weight(1f))
 
@@ -80,6 +141,7 @@ fun ProfileInputScreen(viewModel: FinancialViewModel, onNext: () -> Unit) {
             onClick = {
                 val s = savings.toDoubleOrNull() ?: 0.0
                 val c = creditScore.toIntOrNull() ?: 0
+                val a = age.toIntOrNull() ?: 0
                 
                 viewModel.updateBasicInfo(
                     "$firstName $lastName".trim(),
@@ -88,6 +150,8 @@ fun ProfileInputScreen(viewModel: FinancialViewModel, onNext: () -> Unit) {
                     c,
                     occupation
                 )
+                // Also set age in profile
+                viewModel.userProfile.setAge(a)
                 
                 if (s > 50000 && c < 550) {
                     showWarningDialog = true
@@ -96,7 +160,7 @@ fun ProfileInputScreen(viewModel: FinancialViewModel, onNext: () -> Unit) {
                 }
             },
             modifier = Modifier.fillMaxWidth(),
-            enabled = firstName.isNotBlank() && lastName.isNotBlank() && income.isNotBlank()
+            enabled = firstName.isNotBlank() && lastName.isNotBlank() && age.isNotBlank() && income.isNotBlank() && savings.isNotBlank() && creditScore.isNotBlank()
         ) {
             Text("Continue to Expenses")
         }
