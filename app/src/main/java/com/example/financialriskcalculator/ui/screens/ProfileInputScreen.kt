@@ -148,10 +148,9 @@ fun ProfileInputScreen(viewModel: FinancialViewModel, onNext: () -> Unit) {
                     income.toDoubleOrNull() ?: 0.0,
                     s,
                     c,
-                    occupation
+                    occupation,
+                    a
                 )
-                // Also set age in profile
-                viewModel.userProfile.setAge(a)
                 
                 if (s > 50000 && c < 550) {
                     showWarningDialog = true
@@ -160,7 +159,7 @@ fun ProfileInputScreen(viewModel: FinancialViewModel, onNext: () -> Unit) {
                 }
             },
             modifier = Modifier.fillMaxWidth(),
-            enabled = firstName.isNotBlank() && lastName.isNotBlank() && age.isNotBlank() && income.isNotBlank() && savings.isNotBlank() && creditScore.isNotBlank()
+            enabled = firstName.isNotBlank() && lastName.isNotBlank() && age.isNotBlank() && income.isNotBlank() && savings.isNotBlank() && creditScore.isNotBlank() && occupation.isNotBlank()
         ) {
             Text("Continue to Expenses")
         }

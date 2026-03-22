@@ -6,6 +6,7 @@ import androidx.room.Room;
 import androidx.room.RoomDatabase;
 import com.example.financialriskcalculator.db.dao.UserDao;
 import com.example.financialriskcalculator.db.dao.ExpenseDao;
+import com.example.financialriskcalculator.db.dao.PlanDao;
 import com.example.financialriskcalculator.db.entities.UserEntity;
 import com.example.financialriskcalculator.db.entities.ExpenseEntity;
 import com.example.financialriskcalculator.db.entities.PlanEntity;
@@ -14,6 +15,7 @@ import com.example.financialriskcalculator.db.entities.PlanEntity;
 public abstract class AppDatabase extends RoomDatabase {
     public abstract UserDao userDao();
     public abstract ExpenseDao expenseDao();
+    public abstract PlanDao planDao();
 
     private static volatile AppDatabase INSTANCE;
 
