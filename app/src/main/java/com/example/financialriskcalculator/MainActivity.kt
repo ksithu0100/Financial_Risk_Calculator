@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Settings
@@ -13,7 +14,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.financialriskcalculator.ui.screens.*
@@ -52,9 +52,29 @@ fun AppNavigation() {
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            if (currentState == AppState.PROFILE_MAIN || currentState == AppState.LOGBOOK || currentState == AppState.SETTINGS) {
+            if (currentState == AppState.PROFILE_MAIN || currentState == AppState.LOGBOOK || currentState == AppState.SETTINGS || 
+                currentState == AppState.DECISION_INPUT || currentState == AppState.RESULTS) {
                 TopAppBar(
-                    title = { Text(if (currentState == AppState.PROFILE_MAIN) "PROFILE" else "") },
+                    title = { 
+                        Text(
+                            when(currentState) {
+                                AppState.PROFILE_MAIN -> "PROFILE"
+                                AppState.LOGBOOK -> "LOGBOOK"
+                                AppState.SETTINGS -> "SETTINGS"
+                                AppState.DECISION_INPUT -> "CALCULATOR"
+                                AppState.RESULTS -> "RESULTS"
+                                else -> ""
+                            }
+                        ) 
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = { currentState = AppState.LOGIN }) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.Logout,
+                                contentDescription = "Logout"
+                            )
+                        }
+                    },
                     actions = {
                         IconButton(onClick = { currentState = AppState.LOGBOOK }) {
                             Icon(Icons.Default.History, contentDescription = "Logbook")
