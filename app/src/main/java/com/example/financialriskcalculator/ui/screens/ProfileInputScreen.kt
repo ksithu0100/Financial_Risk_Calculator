@@ -173,7 +173,8 @@ fun ProfileInputScreen(
                     income.toDoubleOrNull() ?: 0.0,
                     s,
                     c,
-                    occupation
+                    occupation,
+                    a
                 )
                 
                 if (s > 50000 && c < 550) {
@@ -183,7 +184,7 @@ fun ProfileInputScreen(
                 }
             },
             modifier = Modifier.fillMaxWidth(),
-            enabled = firstName.isNotBlank() && lastName.isNotBlank() && age.isNotBlank() && income.isNotBlank() && savings.isNotBlank() && creditScore.isNotBlank()
+            enabled = firstName.isNotBlank() && lastName.isNotBlank() && age.isNotBlank() && income.isNotBlank() && savings.isNotBlank() && creditScore.isNotBlank() && occupation.isNotBlank()
         ) {
             Text("Continue to Expenses")
         }

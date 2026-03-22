@@ -10,13 +10,17 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.financialriskcalculator.db.AppDatabase
 import com.example.financialriskcalculator.db.entities.ExpenseEntity
+import com.example.financialriskcalculator.db.entities.PlanEntity
 import com.example.financialriskcalculator.db.entities.UserEntity
 import com.example.financialriskcalculator.logic.RiskCalculator
-import com.example.financialriskcalculator.models.FinancialDecision
-import com.example.financialriskcalculator.models.UserProfile
+import com.example.financialriskcalculator.models.*
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.time.LocalDate
 
 class FinancialViewModel(application: Application) : AndroidViewModel(application) {
     private val db = AppDatabase.getDatabase(application)
@@ -27,13 +31,15 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
     var userProfile: UserProfile by mutableStateOf(UserProfile())
         private set
 
-    var currentDecision by mutableStateOf<FinancialDecision?>(null)
+    private val _plans = MutableStateFlow<List<FinancialPlan>>(emptyList())
+    val plans: StateFlow<List<FinancialPlan>> = _plans.asStateFlow()
+
+    var activeLtp by mutableStateOf<FinancialPlan.LongTermPlan?>(null)
         private set
 
-    var riskResult by mutableStateOf<RiskCalculator.RiskResult?>(null)
+    var activeStq by mutableStateOf<FinancialPlan.ShortTermQuery?>(null)
         private set
 
-    // Profile Screen State
     var selectedSplitLabel by mutableStateOf("50/30/20")
         private set
     var needsRatio by mutableDoubleStateOf(0.5)
@@ -128,10 +134,8 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    fun calculateRisk(itemName: String, amount: Double, category: FinancialDecision.Category, isLongTerm: Boolean) {
-        val decision = FinancialDecision(itemName, amount, category, isLongTerm)
-        currentDecision = decision
-        riskResult = RiskCalculator.calculateRisk(userProfile, decision)
+    suspend fun checkIfUserExists(): UserEntity? {
+        return withContext(Dispatchers.IO) { db.userDao().getUser() }
     }
 
     fun saveProfileToDb() {

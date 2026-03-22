@@ -18,9 +18,19 @@ public class PlanEntity {
     public int id;
 
     public int userId;
-    public String planName; // e.g., "LT Plan 1"
-    public String goal;     // e.g., "Vacation to Hawaii"
-    public double cost;     // Must be >= 0
+    public String planName;
+    public String type; // "LTP" or "STQ"
+    
+    // LTP specific
+    public String goal;
+    public double cost;
+    public double amountSaved;
+    public String createDate;
     public String goalDate;
     public String description;
+
+    // Split for this plan if custom
+    public double needsRatio;
+    public double wantsRatio;
+    public double savingsRatio;
 }

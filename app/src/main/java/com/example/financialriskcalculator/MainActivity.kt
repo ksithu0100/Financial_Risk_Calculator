@@ -39,7 +39,7 @@ class MainActivity : ComponentActivity() {
 }
 
 enum class AppState {
-    LOGIN, SIGNUP, PROFILE_INPUT, FIXED_EXPENSES, DECISION_INPUT, RESULTS, PROFILE_MAIN, LOGBOOK, SETTINGS
+    LOGIN, SIGNUP, PROFILE_INPUT, FIXED_EXPENSES, DECISION_INPUT, RESULTS, PROFILE_MAIN, LOGBOOK, SETTINGS, LONG_TERM_PLAN, SHORT_TERM_PLAN
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -53,7 +53,7 @@ fun AppNavigation() {
         modifier = Modifier.fillMaxSize(),
         topBar = {
             if (currentState == AppState.PROFILE_MAIN || currentState == AppState.LOGBOOK || currentState == AppState.SETTINGS || 
-                currentState == AppState.DECISION_INPUT || currentState == AppState.RESULTS) {
+                currentState == AppState.DECISION_INPUT || currentState == AppState.RESULTS || currentState == AppState.LONG_TERM_PLAN || currentState == AppState.SHORT_TERM_PLAN) {
                 TopAppBar(
                     title = { 
                         Text(
@@ -63,6 +63,8 @@ fun AppNavigation() {
                                 AppState.SETTINGS -> "SETTINGS"
                                 AppState.DECISION_INPUT -> "CALCULATOR"
                                 AppState.RESULTS -> "RESULTS"
+                                AppState.LONG_TERM_PLAN -> "LONG TERM PLAN"
+                                AppState.SHORT_TERM_PLAN -> "SHORT TERM QUERY"
                                 else -> ""
                             }
                         ) 
