@@ -1,6 +1,7 @@
 package com.example.financialriskcalculator.db.dao;
 
 import androidx.room.Dao;
+import androidx.room.Delete;
 import androidx.room.Insert;
 import androidx.room.OnConflictStrategy;
 import androidx.room.Query;
@@ -12,9 +13,12 @@ public interface UserDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     long insertUser(UserEntity user);
 
-    @Query("SELECT * FROM users LIMIT 1")
-    UserEntity getUser();
+    @Query("SELECT * FROM users WHERE email = :email LIMIT 1")
+    UserEntity getUserByEmail(String email);
 
     @Query("SELECT * FROM users")
     List<UserEntity> getAllUsers();
+
+    @Delete
+    void deleteUser(UserEntity user);
 }

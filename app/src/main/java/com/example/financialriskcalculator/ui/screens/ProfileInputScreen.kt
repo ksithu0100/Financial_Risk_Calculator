@@ -4,6 +4,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -12,14 +14,26 @@ import androidx.compose.ui.unit.dp
 import com.example.financialriskcalculator.viewmodel.FinancialViewModel
 
 @Composable
-fun ProfileInputScreen(viewModel: FinancialViewModel, onNext: () -> Unit) {
-    var firstName by remember { mutableStateOf("") }
-    var lastName by remember { mutableStateOf("") }
-    var age by remember { mutableStateOf("") }
-    var income by remember { mutableStateOf("") }
-    var savings by remember { mutableStateOf("") }
-    var creditScore by remember { mutableStateOf("") }
-    var occupation by remember { mutableStateOf("") }
+fun ProfileInputScreen(
+    viewModel: FinancialViewModel, 
+    onNext: () -> Unit,
+    onBack: (() -> Unit)? = null
+) {
+    val userProfile = viewModel.userProfile
+    
+    var firstName by remember { 
+        val names = (userProfile.name ?: "").split(" ")
+        mutableStateOf(names.getOrNull(0) ?: "") 
+    }
+    var lastName by remember { 
+        val names = (userProfile.name ?: "").split(" ")
+        mutableStateOf(if (names.size > 1) names.subList(1, names.size).joinToString(" ") else "") 
+    }
+    var age by remember { mutableStateOf(if (userProfile.age == 0) "" else userProfile.age.toString()) }
+    var income by remember { mutableStateOf(if (userProfile.monthlyIncome == 0.0) "" else userProfile.monthlyIncome.toString()) }
+    var savings by remember { mutableStateOf(if (userProfile.totalSavings == 0.0) "" else userProfile.totalSavings.toString()) }
+    var creditScore by remember { mutableStateOf(if (userProfile.creditScore == 0) "" else userProfile.creditScore.toString()) }
+    var occupation by remember { mutableStateOf(userProfile.occupation ?: "") }
     
     var showWarningDialog by remember { mutableStateOf(false) }
 
@@ -72,7 +86,17 @@ fun ProfileInputScreen(viewModel: FinancialViewModel, onNext: () -> Unit) {
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text("User Profile Information", style = MaterialTheme.typography.headlineMedium)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text("User Profile Information", style = MaterialTheme.typography.headlineMedium)
+            if (onBack != null) {
+                IconButton(onClick = onBack) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                }
+            }
+        }
 
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -145,6 +169,7 @@ fun ProfileInputScreen(viewModel: FinancialViewModel, onNext: () -> Unit) {
                 
                 viewModel.updateBasicInfo(
                     "$firstName $lastName".trim(),
+                    a,
                     income.toDoubleOrNull() ?: 0.0,
                     s,
                     c,

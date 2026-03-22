@@ -11,7 +11,7 @@ import com.example.financialriskcalculator.db.entities.UserEntity;
 import com.example.financialriskcalculator.db.entities.ExpenseEntity;
 import com.example.financialriskcalculator.db.entities.PlanEntity;
 
-@Database(entities = {UserEntity.class, ExpenseEntity.class, PlanEntity.class}, version = 1)
+@Database(entities = {UserEntity.class, ExpenseEntity.class, PlanEntity.class}, version = 4)
 public abstract class AppDatabase extends RoomDatabase {
     public abstract UserDao userDao();
     public abstract ExpenseDao expenseDao();
@@ -25,6 +25,7 @@ public abstract class AppDatabase extends RoomDatabase {
                 if (INSTANCE == null) {
                     INSTANCE = Room.databaseBuilder(context.getApplicationContext(),
                             AppDatabase.class, "financial_risk_db")
+                            .fallbackToDestructiveMigration()
                             .build();
                 }
             }
