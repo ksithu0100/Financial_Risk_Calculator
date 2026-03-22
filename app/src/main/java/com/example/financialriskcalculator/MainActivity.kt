@@ -4,59 +4,86 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.financialriskcalculator.ui.screens.*
 import com.example.financialriskcalculator.ui.theme.FinancialRiskCalculatorTheme
 import com.example.financialriskcalculator.viewmodel.FinancialViewModel
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            FinancialRiskCalculatorTheme {
-                AppNavigation()
+            FinancialRiskCalculatorTheme(dynamicColor = false) {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    AppNavigation()
+                }
             }
         }
     }
 }
 
 enum class AppState {
-    LOGIN, SIGNUP, PROFILE_INPUT, FIXED_EXPENSES, DECISION_INPUT, RESULTS
+    LOGIN, SIGNUP, PROFILE_INPUT, FIXED_EXPENSES, DECISION_INPUT, RESULTS, PROFILE_MAIN, LOGBOOK, SETTINGS
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppNavigation() {
     var currentState by rememberSaveable { mutableStateOf(AppState.LOGIN) }
     val viewModel: FinancialViewModel = viewModel()
+    val scope = rememberCoroutineScope()
 
-    Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+    Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        topBar = {
+            if (currentState == AppState.PROFILE_MAIN || currentState == AppState.LOGBOOK || currentState == AppState.SETTINGS) {
+                TopAppBar(
+                    title = { Text(if (currentState == AppState.PROFILE_MAIN) "PROFILE" else "") },
+                    actions = {
+                        IconButton(onClick = { currentState = AppState.LOGBOOK }) {
+                            Icon(Icons.Default.History, contentDescription = "Logbook")
+                        }
+                        IconButton(onClick = { currentState = AppState.PROFILE_MAIN }) {
+                            Icon(Icons.Default.AccountCircle, contentDescription = "Profile")
+                        }
+                        IconButton(onClick = { currentState = AppState.SETTINGS }) {
+                            Icon(Icons.Default.Settings, contentDescription = "Settings")
+                        }
+                    }
+                )
+            }
+        }
+    ) { innerPadding ->
         Box(modifier = Modifier.padding(innerPadding)) {
             when (currentState) {
                 AppState.LOGIN -> LoginScreen(
-                    onLoginSuccess = { currentState = AppState.PROFILE_INPUT },
+                    onLoginSuccess = {
+                        scope.launch {
+                            val user = viewModel.checkIfUserExists()
+                            if (user != null) {
+                                viewModel.loadProfileFromDb()
+                                currentState = AppState.PROFILE_MAIN
+                            } else {
+                                currentState = AppState.PROFILE_INPUT
+                            }
+                        }
+                    },
                     onCreateAccountClick = { currentState = AppState.SIGNUP }
                 )
                 AppState.SIGNUP -> SignupScreen(
@@ -67,7 +94,8 @@ fun AppNavigation() {
                     currentState = AppState.FIXED_EXPENSES
                 })
                 AppState.FIXED_EXPENSES -> FixedExpensesScreen(viewModel, onNext = {
-                    currentState = AppState.DECISION_INPUT
+                    viewModel.saveProfileToDb()
+                    currentState = AppState.PROFILE_MAIN
                 })
                 AppState.DECISION_INPUT -> DecisionInputScreen(viewModel, onCalculate = {
                     currentState = AppState.RESULTS
@@ -75,266 +103,17 @@ fun AppNavigation() {
                 AppState.RESULTS -> ResultsScreen(viewModel, onReset = {
                     currentState = AppState.DECISION_INPUT
                 })
+                AppState.PROFILE_MAIN -> ProfileScreen(viewModel)
+                AppState.LOGBOOK -> PlaceholderScreen("Logbook")
+                AppState.SETTINGS -> PlaceholderScreen("Settings")
             }
         }
     }
 }
 
 @Composable
-fun LoginScreen(onLoginSuccess: () -> Unit, onCreateAccountClick: () -> Unit) {
-    var username by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFF0F0F0)),
-        contentAlignment = Alignment.TopCenter
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(top = 60.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Image(
-                painter = painterResource(id = R.mipmap.app_logo_foreground),
-                contentDescription = "App Logo",
-                modifier = Modifier
-                    .size(200.dp)
-                    .alpha(0.9f)
-            )
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 32.dp),
-                shape = RoundedCornerShape(24.dp),
-                color = Color(0xFFA9C7EE),
-                shadowElevation = 8.dp
-            ) {
-                Column(
-                    modifier = Modifier.padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = "LOGIN",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.DarkGray
-                    )
-                    
-                    Spacer(modifier = Modifier.height(24.dp))
-                    
-                    OutlinedTextField(
-                        value = username,
-                        onValueChange = { username = it },
-                        label = { Text("Username") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = Color.White,
-                            unfocusedContainerColor = Color.White
-                        )
-                    )
-                    
-                    Spacer(modifier = Modifier.height(16.dp))
-                    
-                    OutlinedTextField(
-                        value = password,
-                        onValueChange = { password = it },
-                        label = { Text("Password") },
-                        visualTransformation = PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = Color.White,
-                            unfocusedContainerColor = Color.White
-                        )
-                    )
-                    
-                    Spacer(modifier = Modifier.height(32.dp))
-                    
-                    Button(
-                        onClick = onLoginSuccess,
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF2D5F8B)
-                        )
-                    ) {
-                        Text("Sign In", color = Color.White)
-                    }
-                    
-                    TextButton(onClick = onCreateAccountClick) {
-                        Text("Create Account", color = Color(0xFF2D5F8B))
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun SignupScreen(onSignupSuccess: () -> Unit, onBackToLogin: () -> Unit) {
-    var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    var confirmPassword by remember { mutableStateOf("") }
-    var passwordVisible by remember { mutableStateOf(false) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFF0F0F0)),
-        contentAlignment = Alignment.TopCenter
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(top = 40.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Image(
-                painter = painterResource(id = R.mipmap.app_logo_foreground),
-                contentDescription = "App Logo",
-                modifier = Modifier
-                    .size(120.dp)
-                    .alpha(0.9f)
-            )
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 32.dp),
-                shape = RoundedCornerShape(24.dp),
-                color = Color(0xFFA9C7EE),
-                shadowElevation = 8.dp
-            ) {
-                Column(
-                    modifier = Modifier.padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = "Create Account",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.DarkGray
-                    )
-                    
-                    Spacer(modifier = Modifier.height(20.dp))
-
-                    OutlinedTextField(
-                        value = email,
-                        onValueChange = { email = it },
-                        label = { Text("Email") },
-                        modifier = Modifier.fillMaxWidth(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = Color.White,
-                            unfocusedContainerColor = Color.White
-                        )
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    OutlinedTextField(
-                        value = password,
-                        onValueChange = { 
-                            password = it
-                            errorMessage = null
-                        },
-                        label = { Text("Password") },
-                        visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                        trailingIcon = {
-                            val image = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
-                            IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                                Icon(imageVector = image, contentDescription = "Toggle password visibility")
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = Color.White,
-                            unfocusedContainerColor = Color.White
-                        )
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    OutlinedTextField(
-                        value = confirmPassword,
-                        onValueChange = { 
-                            confirmPassword = it
-                            errorMessage = null
-                        },
-                        label = { Text("Confirm Password") },
-                        visualTransformation = PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = Color.White,
-                            unfocusedContainerColor = Color.White
-                        )
-                    )
-                    
-                    if (errorMessage != null) {
-                        Text(
-                            text = errorMessage!!,
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.padding(top = 8.dp)
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(24.dp))
-                    
-                    Button(
-                        onClick = {
-                            val validationError = validatePassword(password, confirmPassword)
-                            if (validationError == null) {
-                                onSignupSuccess()
-                            } else {
-                                errorMessage = validationError
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF2D5F8B)
-                        )
-                    ) {
-                        Text("Sign Up", color = Color.White)
-                    }
-                    
-                    TextButton(onClick = onBackToLogin) {
-                        Text("Already have an account? Login", color = Color(0xFF2D5F8B))
-                    }
-                }
-            }
-        }
-    }
-}
-
-fun validatePassword(password: String, confirmPassword: String): String? {
-    if (password != confirmPassword) return "Passwords do not match"
-    if (password.length < 7) return "Password must be at least 7 characters long"
-    if (!password.any { it.isUpperCase() }) return "Password must contain at least one uppercase letter"
-    if (!password.any { it.isDigit() }) return "Password must contain at least one digit"
-    if (!password.any { !it.isLetterOrDigit() }) return "Password must contain at least one special character"
-    return null
-}
-
-@Preview(showBackground = true)
-@Composable
-fun LoginPreview() {
-    FinancialRiskCalculatorTheme {
-        LoginScreen(onLoginSuccess = {}, onCreateAccountClick = {})
+fun PlaceholderScreen(name: String) {
+    Box(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+        Text(text = name, style = MaterialTheme.typography.headlineMedium)
     }
 }
