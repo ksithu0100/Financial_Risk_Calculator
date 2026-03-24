@@ -17,7 +17,10 @@ sealed class FinancialPlan {
         val goalDate: LocalDate? = null,
         val description: String,
         val changes: List<PlanChange> = emptyList(),
-        override val expenditures: List<PlanExpenditure> = emptyList()
+        override val expenditures: List<PlanExpenditure> = emptyList(),
+        val needsRatio: Double = 0.5,
+        val wantsRatio: Double = 0.3,
+        val savingsRatio: Double = 0.2
     ) : FinancialPlan()
 
     data class ShortTermQuery(

@@ -12,12 +12,13 @@ import androidx.compose.ui.unit.dp
 import com.example.financialriskcalculator.models.FinancialDecision
 import com.example.financialriskcalculator.viewmodel.FinancialViewModel
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DecisionInputScreen(viewModel: FinancialViewModel, onCalculate: () -> Unit) {
     var isLongTerm by remember { mutableStateOf(false) }
     var itemName by remember { mutableStateOf("") }
     var amount by remember { mutableStateOf("") }
-    var selectedCategory by remember { mutableStateOf(FinancialDecision.Category.HOUSING) }
+    var selectedCategory by remember { mutableStateOf<FinancialDecision.Category>(FinancialDecision.Category.HOUSING) }
     var categoryExpanded by remember { mutableStateOf(false) }
 
     Column(
@@ -71,7 +72,7 @@ fun DecisionInputScreen(viewModel: FinancialViewModel, onCalculate: () -> Unit) 
                 onDismissRequest = { categoryExpanded = false },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                FinancialDecision.Category.entries.forEach { category ->
+                for (category in FinancialDecision.Category.values()) {
                     DropdownMenuItem(
                         text = { Text(category.displayName) },
                         onClick = {

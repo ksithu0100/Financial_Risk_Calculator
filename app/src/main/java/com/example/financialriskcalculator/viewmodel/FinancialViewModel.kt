@@ -14,6 +14,8 @@ import com.example.financialriskcalculator.db.entities.PlanEntity
 import com.example.financialriskcalculator.db.entities.UserEntity
 import com.example.financialriskcalculator.logic.RiskCalculator
 import com.example.financialriskcalculator.models.*
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -24,6 +26,7 @@ import java.time.LocalDate
 
 class FinancialViewModel(application: Application) : AndroidViewModel(application) {
     private val db = AppDatabase.getDatabase(application)
+    private val gson = Gson()
     
     var currentUserEmail: String? by mutableStateOf(null)
         private set
@@ -47,6 +50,12 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
     var wantsRatio by mutableDoubleStateOf(0.3)
         private set
     var savingsRatio by mutableDoubleStateOf(0.2)
+        private set
+
+    // Properties for ResultsScreen
+    var riskResult: RiskCalculator.RiskResult? by mutableStateOf(null)
+        private set
+    var currentDecision: FinancialDecision? by mutableStateOf(null)
         private set
 
     val availableExtraExpenses = listOf(
@@ -109,6 +118,9 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
         userProfile = UserProfile()
         currentDecision = null
         riskResult = null
+        _plans.value = emptyList()
+        activeLtp = null
+        activeStq = null
     }
 
     fun setCurrentUser(email: String) {
@@ -135,7 +147,7 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     suspend fun checkIfUserExists(): UserEntity? {
-        return withContext(Dispatchers.IO) { db.userDao().getUser() }
+        return withContext(Dispatchers.IO) { db.userDao().allUsers.firstOrNull() }
     }
 
     fun saveProfileToDb() {
@@ -154,7 +166,7 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
                 userEntity.monthlyIncome = userProfile.getMonthlyIncome()
                 userEntity.totalSavings = userProfile.getTotalSavings()
                 userEntity.creditScore = userProfile.getCreditScore()
-                userEntity.occupation = userProfile.getOccupation()
+                userEntity.occupation = userProfile.getOccupation() ?: ""
                 userEntity.budgetStrategy = selectedSplitLabel
 
                 val userId = db.userDao().insertUser(userEntity).toInt()
@@ -189,18 +201,18 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
                     
                     withContext(Dispatchers.Main) {
                         val updatedProfile = UserProfile()
-                        updatedProfile.setName("${userEntity.firstName ?: ""} ${userEntity.lastName ?: ""}".trim())
+                        updatedProfile.setName("${userEntity.firstName} ${userEntity.lastName}".trim())
                         updatedProfile.setAge(userEntity.age)
                         updatedProfile.setMonthlyIncome(userEntity.monthlyIncome)
                         updatedProfile.setTotalSavings(userEntity.totalSavings)
                         updatedProfile.setCreditScore(userEntity.creditScore)
-                        updatedProfile.setOccupation(userEntity.occupation ?: "")
+                        updatedProfile.setOccupation(userEntity.occupation)
                         
                         expenses.forEach { 
                             updatedProfile.addFixedExpense(it.expenseName, it.amount)
                         }
 
-                        selectedSplitLabel = userEntity.budgetStrategy ?: "50/30/20"
+                        selectedSplitLabel = userEntity.budgetStrategy
                         if (selectedSplitLabel == "70/20/10") {
                             needsRatio = 0.7; wantsRatio = 0.2; savingsRatio = 0.1
                         } else if (selectedSplitLabel == "50/30/20") {
@@ -209,6 +221,7 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
                         
                         userProfile = updatedProfile
                     }
+                    loadPlans(userId)
                 }
             } catch (e: Exception) {
                 Log.e("FinancialViewModel", "Error loading profile", e)
@@ -216,21 +229,111 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    fun deleteAccount(onSuccess: () -> Unit) {
-        val email = currentUserEmail ?: return
+    private fun loadPlans(userId: Int) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val user = db.userDao().getUserByEmail(email)
-                if (user != null) {
-                    db.expenseDao().deleteExpensesForUser(user.id)
-                    db.userDao().deleteUser(user)
-                    withContext(Dispatchers.Main) {
-                        logout()
-                        onSuccess()
+                val entities = db.planDao().getPlansForUser(userId)
+                val mapped = entities.map { entity: PlanEntity ->
+                    val changesType = object : TypeToken<List<PlanChange>>() {}.type
+                    val expendituresType = object : TypeToken<List<PlanExpenditure>>() {}.type
+                    
+                    val changes: List<PlanChange> = if (entity.changesJson != null) gson.fromJson(entity.changesJson, changesType) else emptyList()
+                    val expenditures: List<PlanExpenditure> = if (entity.expendituresJson != null) gson.fromJson(entity.expendituresJson, expendituresType) else emptyList()
+
+                    if ("LTP" == entity.type) {
+                        FinancialPlan.LongTermPlan(
+                            id = entity.id,
+                            name = entity.planName ?: "",
+                            goal = entity.goal ?: "",
+                            cost = entity.cost,
+                            amountSaved = entity.amountSaved,
+                            createDate = try { LocalDate.parse(entity.createDate ?: "") } catch(e: Exception) { LocalDate.now() },
+                            goalDate = if (entity.goalDate != null && entity.goalDate != "null") try { LocalDate.parse(entity.goalDate) } catch(e: Exception) { null } else null,
+                            description = entity.description ?: "",
+                            changes = changes,
+                            expenditures = expenditures,
+                            needsRatio = if (entity.needsRatio > 0) entity.needsRatio else 0.5,
+                            wantsRatio = if (entity.wantsRatio > 0) entity.wantsRatio else 0.3,
+                            savingsRatio = if (entity.savingsRatio > 0) entity.savingsRatio else 0.2
+                        )
+                    } else {
+                        FinancialPlan.ShortTermQuery(
+                            id = entity.id, 
+                            name = entity.planName ?: "", 
+                            expenditures = expenditures
+                        )
                     }
                 }
+                _plans.value = mapped
             } catch (e: Exception) {
-                Log.e("FinancialViewModel", "Error deleting account", e)
+                Log.e("FinancialViewModel", "Error loading plans", e)
+            }
+        }
+    }
+
+    fun selectPlan(plan: FinancialPlan) {
+        if (plan is FinancialPlan.LongTermPlan) {
+            activeLtp = plan
+        } else if (plan is FinancialPlan.ShortTermQuery) {
+            activeStq = plan
+        }
+    }
+
+    fun calculateRisk(itemName: String, amount: Double, category: FinancialDecision.Category, isLongTerm: Boolean) {
+        val decision = FinancialDecision(itemName, amount, category, isLongTerm)
+        currentDecision = decision
+        riskResult = RiskCalculator.calculateRisk(userProfile, decision)
+    }
+
+    fun savePlan(plan: FinancialPlan) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val email = currentUserEmail ?: return@launch
+                val user = db.userDao().getUserByEmail(email) ?: return@launch
+                val entity = PlanEntity()
+                if (plan.id != 0) {
+                    entity.id = plan.id
+                }
+                entity.userId = user.id
+                entity.planName = plan.name
+                entity.expendituresJson = gson.toJson(plan.expenditures)
+                
+                if (plan is FinancialPlan.LongTermPlan) {
+                    entity.type = "LTP"
+                    entity.goal = plan.goal
+                    entity.cost = plan.cost
+                    entity.amountSaved = plan.amountSaved
+                    entity.createDate = plan.createDate.toString()
+                    entity.goalDate = plan.goalDate?.toString() ?: "null"
+                    entity.description = plan.description
+                    entity.changesJson = gson.toJson(plan.changes)
+                    entity.needsRatio = plan.needsRatio
+                    entity.wantsRatio = plan.wantsRatio
+                    entity.savingsRatio = plan.savingsRatio
+                } else {
+                    entity.type = "STQ"
+                }
+
+                db.planDao().insertPlan(entity)
+                loadPlans(user.id)
+            } catch (e: Exception) {
+                Log.e("FinancialViewModel", "Error saving plan", e)
+            }
+        }
+    }
+
+    fun deletePlan(plan: FinancialPlan) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val entity = db.planDao().getPlanById(plan.id)
+                if (entity != null) {
+                    db.planDao().deletePlan(entity)
+                    val email = currentUserEmail ?: return@launch
+                    val user = db.userDao().getUserByEmail(email) ?: return@launch
+                    loadPlans(user.id)
+                }
+            } catch (e: Exception) {
+                Log.e("FinancialViewModel", "Error deleting plan", e)
             }
         }
     }

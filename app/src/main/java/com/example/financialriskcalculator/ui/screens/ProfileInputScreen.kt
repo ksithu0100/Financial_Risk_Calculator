@@ -11,6 +11,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.example.financialriskcalculator.models.UserProfile
 import com.example.financialriskcalculator.viewmodel.FinancialViewModel
 
 @Composable
@@ -22,18 +23,18 @@ fun ProfileInputScreen(
     val userProfile = viewModel.userProfile
     
     var firstName by remember { 
-        val names = (userProfile.name ?: "").split(" ")
+        val names = (userProfile.getName() ?: "").split(" ")
         mutableStateOf(names.getOrNull(0) ?: "") 
     }
     var lastName by remember { 
-        val names = (userProfile.name ?: "").split(" ")
+        val names = (userProfile.getName() ?: "").split(" ")
         mutableStateOf(if (names.size > 1) names.subList(1, names.size).joinToString(" ") else "") 
     }
-    var age by remember { mutableStateOf(if (userProfile.age == 0) "" else userProfile.age.toString()) }
-    var income by remember { mutableStateOf(if (userProfile.monthlyIncome == 0.0) "" else userProfile.monthlyIncome.toString()) }
-    var savings by remember { mutableStateOf(if (userProfile.totalSavings == 0.0) "" else userProfile.totalSavings.toString()) }
-    var creditScore by remember { mutableStateOf(if (userProfile.creditScore == 0) "" else userProfile.creditScore.toString()) }
-    var occupation by remember { mutableStateOf(userProfile.occupation ?: "") }
+    var age by remember { mutableStateOf(if (userProfile.getAge() == 0) "" else userProfile.getAge().toString()) }
+    var income by remember { mutableStateOf(if (userProfile.getMonthlyIncome() == 0.0) "" else userProfile.getMonthlyIncome().toString()) }
+    var savings by remember { mutableStateOf(if (userProfile.getTotalSavings() == 0.0) "" else userProfile.getTotalSavings().toString()) }
+    var creditScore by remember { mutableStateOf(if (userProfile.getCreditScore() == 0) "" else userProfile.getCreditScore().toString()) }
+    var occupation by remember { mutableStateOf(userProfile.getOccupation() ?: "") }
     
     var showWarningDialog by remember { mutableStateOf(false) }
 
@@ -173,8 +174,7 @@ fun ProfileInputScreen(
                     income.toDoubleOrNull() ?: 0.0,
                     s,
                     c,
-                    occupation,
-                    a
+                    occupation
                 )
                 
                 if (s > 50000 && c < 550) {

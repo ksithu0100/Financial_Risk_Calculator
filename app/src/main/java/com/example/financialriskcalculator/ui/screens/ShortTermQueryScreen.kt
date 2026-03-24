@@ -8,8 +8,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -36,13 +38,11 @@ fun ShortTermQueryScreen(viewModel: FinancialViewModel, onSave: () -> Unit, onBa
     var customExpName by remember { mutableStateOf("") }
     var customExpAmount by remember { mutableStateOf("") }
 
-    var showAssessment by remember { mutableStateOf(false) }
-
     val monthlyIncome = viewModel.userProfile.monthlyIncome
     val totalExpenditure = expenditures.sumOf { it.amount }
     
-    val needLimit = monthlyIncome * 0.5
-    val wantLimit = monthlyIncome * 0.3
+    val needLimit = monthlyIncome * viewModel.needsRatio
+    val wantLimit = monthlyIncome * viewModel.wantsRatio
     val needExpenditure = expenditures.filter { it.name in listOf("Mortgage", "Rent", "Utilities", "Insurance") }.sumOf { it.amount }
     val wantExpenditure = totalExpenditure - needExpenditure
 
@@ -53,7 +53,12 @@ fun ShortTermQueryScreen(viewModel: FinancialViewModel, onSave: () -> Unit, onBa
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text("Short Term Query", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onBack) {
+                Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+            }
+            Text("Short Term Query", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        }
 
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("Plan: ", fontWeight = FontWeight.Bold)
@@ -97,7 +102,7 @@ fun ShortTermQueryScreen(viewModel: FinancialViewModel, onSave: () -> Unit, onBa
             Button(onClick = { /* Already here */ }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFADD8E6))) {
                 Text("Short Term", color = Color.Black)
             }
-            OutlinedButton(onClick = { /* Switch to LTP */ }) {
+            OutlinedButton(onClick = { /* Switch to LTP logic could be here */ }) {
                 Text("Long Term", color = Color.Black)
             }
         }
@@ -163,23 +168,21 @@ fun ShortTermQueryScreen(viewModel: FinancialViewModel, onSave: () -> Unit, onBa
             }
         }
 
-        Button(
-            onClick = { showAssessment = true },
-            modifier = Modifier.align(Alignment.CenterHorizontally),
-            colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-            border = androidx.compose.foundation.BorderStroke(1.dp, Color.Black)
-        ) {
-            Text("Assess Plan", color = Color.Red)
-        }
+        Spacer(modifier = Modifier.weight(1f))
 
-        if (showAssessment) {
-            AssessmentChatBox(
-                title = "Short Term Query Assessment",
-                totalCost = totalExpenditure,
-                budget = monthlyIncome * 0.8,
-                details = emptyList(),
-                onDismiss = { showAssessment = false }
-            )
+        FloatingActionButton(
+            onClick = {
+                val newPlan = FinancialPlan.ShortTermQuery(
+                    id = plan?.id ?: 0,
+                    name = name,
+                    expenditures = expenditures
+                )
+                viewModel.savePlan(newPlan)
+                onSave()
+            },
+            modifier = Modifier.align(Alignment.End)
+        ) {
+            Icon(Icons.Default.Save, contentDescription = "Save Plan")
         }
     }
 

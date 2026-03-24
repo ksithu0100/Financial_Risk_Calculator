@@ -141,7 +141,23 @@ fun AppNavigation() {
                     currentState = AppState.DECISION_INPUT
                 })
                 AppState.PROFILE_MAIN -> ProfileScreen(viewModel)
-                AppState.LOGBOOK -> PlaceholderScreen("Logbook")
+                AppState.LOGBOOK -> LogbookScreen(viewModel, onEditPlan = { plan ->
+                    if (plan is com.example.financialriskcalculator.models.FinancialPlan.LongTermPlan) {
+                        currentState = AppState.LONG_TERM_PLAN
+                    } else {
+                        currentState = AppState.SHORT_TERM_PLAN
+                    }
+                })
+                AppState.LONG_TERM_PLAN -> LongTermPlanScreen(
+                    viewModel = viewModel,
+                    onSave = { currentState = AppState.LOGBOOK },
+                    onBack = { currentState = AppState.LOGBOOK }
+                )
+                AppState.SHORT_TERM_PLAN -> ShortTermQueryScreen(
+                    viewModel = viewModel,
+                    onSave = { currentState = AppState.LOGBOOK },
+                    onBack = { currentState = AppState.LOGBOOK }
+                )
                 AppState.SETTINGS -> SettingsScreen(
                     viewModel = viewModel,
                     onEditProfile = { currentState = AppState.PROFILE_INPUT },

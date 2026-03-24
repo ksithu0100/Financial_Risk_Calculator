@@ -29,8 +29,12 @@ public class PlanEntity {
     public String goalDate;
     public String description;
 
-    // Split for this plan if custom
+    // Split for this plan
     public double needsRatio;
     public double wantsRatio;
     public double savingsRatio;
+
+    // Serialized lists for persistence
+    public String changesJson;
+    public String expendituresJson;
 }
