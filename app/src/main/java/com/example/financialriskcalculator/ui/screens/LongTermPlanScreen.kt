@@ -1,5 +1,6 @@
 package com.example.financialriskcalculator.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -7,6 +8,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -55,6 +57,21 @@ fun LongTermPlanScreen(viewModel: FinancialViewModel, onSave: () -> Unit, onBack
     var showFeasibilityWarning by remember { mutableStateOf(false) }
     var showAssessment by remember { mutableStateOf(false) }
 
+    val monthlyIncome = viewModel.userProfile.monthlyIncome
+    val needsRatio = plan?.needsRatio ?: viewModel.needsRatio
+    val wantsRatio = plan?.wantsRatio ?: viewModel.wantsRatio
+    val savingsRatio = plan?.savingsRatio ?: viewModel.savingsRatio
+    
+    val needsAllocated = monthlyIncome * needsRatio
+    val wantsAllocated = monthlyIncome * wantsRatio
+    val needsSpent = viewModel.userProfile.totalFixedExpenses
+    
+    val needChanges = changes.filter { it.type == ChangeType.NEED }.sumOf { it.amount }
+    val wantChanges = changes.filter { it.type == ChangeType.WANT }.sumOf { it.amount }
+    
+    val currentNeedUsage = (needsSpent - needChanges).coerceAtLeast(0.0)
+    val currentWantUsage = (0.0 - wantChanges).coerceAtLeast(0.0)
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -62,7 +79,12 @@ fun LongTermPlanScreen(viewModel: FinancialViewModel, onSave: () -> Unit, onBack
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text("Long Term Plan", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onBack) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+            }
+            Text("Long Term Plan", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        }
 
         OutlinedTextField(
             value = name,
@@ -216,11 +238,17 @@ fun LongTermPlanScreen(viewModel: FinancialViewModel, onSave: () -> Unit, onBack
         Text("Progress", fontWeight = FontWeight.Bold)
         Text("Current Split: ${viewModel.selectedSplitLabel}")
         
-        LinearProgressIndicator(progress = { 0.5f }, modifier = Modifier.fillMaxWidth().height(12.dp), color = Color(0xFFB4E197))
-        Text("Need Balance: $1000/1000 remaining", fontSize = 12.sp)
+        LongTermProgressBar(
+            label = "Need Balance", 
+            remaining = needsAllocated - currentNeedUsage, 
+            total = needsAllocated
+        )
         
-        LinearProgressIndicator(progress = { 0.3f }, modifier = Modifier.fillMaxWidth().height(12.dp), color = Color(0xFFB4E197))
-        Text("Want Balance: $300/500 remaining", fontSize = 12.sp)
+        LongTermProgressBar(
+            label = "Want Balance", 
+            remaining = wantsAllocated - currentWantUsage, 
+            total = wantsAllocated
+        )
 
         HorizontalDivider()
         Text("Expenditures:", fontWeight = FontWeight.Bold)
@@ -305,7 +333,7 @@ fun LongTermPlanScreen(viewModel: FinancialViewModel, onSave: () -> Unit, onBack
             val monthsRemaining = if (targetDate != null) ChronoUnit.MONTHS.between(LocalDate.now(), targetDate).coerceAtLeast(1) else 12L
             val monthlyNeeded = (totalCostNum - saved) / monthsRemaining
             val monthlyIncomeNum = viewModel.userProfile.monthlyIncome
-            val savingsCapacity = monthlyIncomeNum * 0.2
+            val savingsCapacity = monthlyIncomeNum * savingsRatio
             
             AssessmentChatBox(
                 title = "Long Term Plan Assessment",
@@ -313,7 +341,7 @@ fun LongTermPlanScreen(viewModel: FinancialViewModel, onSave: () -> Unit, onBack
                 budget = savingsCapacity,
                 details = listOf(
                     "Remaining to Save" to (totalCostNum - saved),
-                    "Time Frame" to monthsRemaining.toDouble(),
+                    "Time Frame (months)" to monthsRemaining.toDouble(),
                     "Monthly Goal" to monthlyNeeded,
                     "Monthly Capacity" to savingsCapacity
                 ),
@@ -333,7 +361,10 @@ fun LongTermPlanScreen(viewModel: FinancialViewModel, onSave: () -> Unit, onBack
                     goalDate = try { LocalDate.parse(goalDate) } catch(e: DateTimeParseException) { null },
                     description = description,
                     changes = changes,
-                    expenditures = expenditures
+                    expenditures = expenditures,
+                    needsRatio = needsRatio,
+                    wantsRatio = wantsRatio,
+                    savingsRatio = savingsRatio
                 )
                 viewModel.savePlan(newPlan)
                 onSave()
@@ -378,5 +409,28 @@ fun LongTermPlanScreen(viewModel: FinancialViewModel, onSave: () -> Unit, onBack
                 }
             }
         )
+    }
+}
+
+@Composable
+fun LongTermProgressBar(label: String, remaining: Double, total: Double) {
+    val progress = if (total > 0) ((total - remaining) / total).toFloat().coerceIn(0f, 1f) else 1f
+    Column(modifier = Modifier.padding(vertical = 4.dp)) {
+        Text(text = "$label: $${remaining.toInt()}/$${total.toInt()} remaining", fontSize = 12.sp)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(20.dp)
+                .background(Color(0xFFFFB4B4), RoundedCornerShape(4.dp)) // Red for spent
+                .border(1.dp, Color.Black, RoundedCornerShape(4.dp))
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth((1f - progress).coerceIn(0f, 1f))
+                    .fillMaxHeight()
+                    .align(Alignment.CenterEnd)
+                    .background(Color(0xFFB4E197), RoundedCornerShape(topEnd = 4.dp, bottomEnd = 4.dp)) // Green for remaining
+            )
+        }
     }
 }

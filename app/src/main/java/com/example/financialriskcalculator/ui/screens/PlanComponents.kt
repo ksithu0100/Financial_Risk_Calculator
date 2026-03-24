@@ -6,7 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -14,6 +14,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import java.util.Locale
 
 @Composable
@@ -70,7 +71,7 @@ fun AssessmentChatBox(
             Text("Scale Reference:", fontWeight = FontWeight.Bold, fontSize = 14.sp)
             Column {
                 AssessmentScaleRow(0, "Safe (<30%)", percentage < 30.0)
-                AssessmentScaleRow(1, "Caution (30-50%)", percentage >= 30.0 && percentage <= 50.0)
+                AssessmentScaleRow(1, "Caution (30-50%)", percentage in 30.0..50.0)
                 AssessmentScaleRow(2, "High Risk (50-75%)", percentage > 50.0 && percentage <= 75.0)
                 AssessmentScaleRow(3, "Critical (>75%)", percentage > 75.0)
             }
@@ -128,4 +129,57 @@ fun CommonExpenditureDialog(
             TextButton(onClick = onDismiss) { Text("Cancel") }
         }
     )
+}
+
+@Composable
+fun SplitSelectionDialog(onDismiss: () -> Unit, onSelect: (String, Int, Int, Int) -> Unit) {
+    var customMode by remember { mutableStateOf(false) }
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surface) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text("Select Budget Split", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                Spacer(modifier = Modifier.height(16.dp))
+                if (!customMode) {
+                    Button(onClick = { onSelect("50/30/20", 50, 30, 20) }, modifier = Modifier.fillMaxWidth()) { Text("50/30/20") }
+                    Button(onClick = { onSelect("70/20/10", 70, 20, 10) }, modifier = Modifier.fillMaxWidth()) { Text("70/20/10") }
+                    OutlinedButton(onClick = { customMode = true }, modifier = Modifier.fillMaxWidth()) { Text("Custom") }
+                } else {
+                    var n by remember { mutableStateOf("0") }
+                    var w by remember { mutableStateOf("0") }
+                    var s by remember { mutableStateOf("0") }
+                    val total = (n.toIntOrNull() ?: 0) + (w.toIntOrNull() ?: 0) + (s.toIntOrNull() ?: 0)
+                    OutlinedTextField(value = n, onValueChange = { n = it }, label = { Text("Needs %") })
+                    OutlinedTextField(value = w, onValueChange = { w = it }, label = { Text("Wants %") })
+                    OutlinedTextField(value = s, onValueChange = { s = it }, label = { Text("Savings %") })
+                    if (total != 100) Text("Must sum to 100 (Current: $total)", color = Color.Red, fontSize = 12.sp)
+                    Row(modifier = Modifier.fillMaxWidth().padding(top = 16.dp), horizontalArrangement = Arrangement.End) {
+                        TextButton(onClick = { customMode = false }) { Text("Back") }
+                        Button(onClick = { onSelect("Custom ($n/$w/$s)", n.toInt(), w.toInt(), s.toInt()) }, enabled = total == 100) { Text("Save") }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun FinancialProgressBar(label: String, subLabel: String, progress: Float, color: Color, backgroundColor: Color) {
+    Column(modifier = Modifier.padding(vertical = 8.dp)) {
+        Text(text = "$label: $subLabel", fontSize = 14.sp)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(24.dp)
+                .background(backgroundColor, RoundedCornerShape(4.dp))
+                .border(1.dp, Color.Gray, RoundedCornerShape(4.dp))
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(1f - progress)
+                    .fillMaxHeight()
+                    .align(Alignment.CenterEnd)
+                    .background(color, RoundedCornerShape(topEnd = 4.dp, bottomEnd = 4.dp))
+            )
+        }
+    }
 }
